@@ -19,5 +19,8 @@ export const usePlayerSize = () => {
     }
   }, [isLandscape]);
 
-  return playerSize;
+  return {
+    playerWidth: playerSize.width,
+    playerHeight: playerSize.height
+  };
 };

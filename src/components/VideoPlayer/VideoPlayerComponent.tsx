@@ -17,7 +17,7 @@ export const VideoPlayerComponent: React.FC<VideoPlayerComponentProps> = ({
 }) => {
   const playerRef = useRef<YoutubeIframeRef>(null);
   const isLandscape = useOrientation();
-  const playerSize = usePlayerSize();
+  const { playerHeight } = usePlayerSize();
   
   // 비디오 상태
   const [isPlaying, setIsPlaying] = useState(false);
@@ -131,7 +131,7 @@ export const VideoPlayerComponent: React.FC<VideoPlayerComponentProps> = ({
           iv_load_policy: 3
         }}
         ref={playerRef}
-        height={playerSize.height}
+        height={playerHeight}
         play={isPlaying}
         videoId={videoId}
         onChangeState={onStateChange}

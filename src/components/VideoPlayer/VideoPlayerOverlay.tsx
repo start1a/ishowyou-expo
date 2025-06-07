@@ -15,7 +15,6 @@ interface VideoPlayerOverlayProps {
   duration: number;
   playHeadWidth: number;
   smallIconWidth: number;
-  formatTime: (seconds: number) => string;
   onToggleController: () => void;
   onPlayToggle: () => void;
   onSeekBackward: () => void;

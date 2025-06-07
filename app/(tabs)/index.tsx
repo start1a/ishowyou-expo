@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import { SafeAreaView, StatusBar, Text, View } from "react-native";
+import { SafeAreaView, StatusBar, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { scaleWidth, scaleHeight } from "@src/DeviceScale";
+import { scaleWidth } from "@src/DeviceScale";
 import { PortraitProgressBar } from "@src/components/ProgressBar";
 import { VideoPlayerComponent } from "@src/components/VideoPlayer";
 import { VIDEO_LIST } from "@src/constants/videoData";
 import { VideoList } from "@/src/components/VideoList/VideoList";
 import { useOrientationContext } from "@/src/contexts/OrientationContext";
-import { VideoUtils } from "@/src/utils/VideoUtils";
+import { usePlayerSize } from "@/src/hooks/usePlayerSize";
 
 
 export default function TabOneScreen() {
@@ -17,6 +17,7 @@ export default function TabOneScreen() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const insets = useSafeAreaInsets();
+  const { playerHeight } = usePlayerSize();
 
   const WIDTH_PLAY_HEAD = scaleWidth(15);
 
@@ -45,9 +46,6 @@ export default function TabOneScreen() {
           backgroundColor: 'white',
           width: isLandscape ? '35%' : '100%',
         }}>
-          <Text style={{ textAlign: 'center', marginTop: scaleHeight(10), fontSize: scaleWidth(16), fontWeight: 'bold' }}>
-            {VideoUtils.formatTime(currentTime)} / {VideoUtils.formatTime(duration)}
-          </Text>
           <VideoList
             videos={VIDEO_LIST}
             onVideoSelect={setSelectedVideo}
@@ -59,7 +57,7 @@ export default function TabOneScreen() {
             currentTime={currentTime}
             duration={duration}
             playHeadWidth={WIDTH_PLAY_HEAD}
-            playerHeight={200} // 임시값, 실제로는 VideoPlayerComponent에서 계산된 값을 받아야 함
+            playerHeight={playerHeight} // 임시값, 실제로는 VideoPlayerComponent에서 계산된 값을 받아야 함
           />
         )}
       </SafeAreaView>

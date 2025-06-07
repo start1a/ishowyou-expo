@@ -19,10 +19,12 @@ export const PortraitProgressBar: React.FC<ProgressBarProps> = ({
 }) => {
   const progress = duration > 0 ? currentTime / duration : 0;
   const screenWidth = Dimensions.get('window').width;
+
+  const TRACK_HEIGHT = scaleHeight(4);
   
   return (
-    <View style={[styles.portraitContainer, { top: playerHeight - scaleHeight(4) }, style]}>
-      <View style={[styles.progressTrack, { width: screenWidth }]}>
+    <View style={[styles.portraitContainer, { top: playerHeight - (TRACK_HEIGHT / 2) }, style]}>
+      <View style={[styles.progressTrack, { width: screenWidth, height: TRACK_HEIGHT }]}>
         <View 
           style={[
             styles.progressFill, 
@@ -91,7 +93,6 @@ const styles = StyleSheet.create({
     marginBottom: scaleHeight(8),
   },
   progressTrack: {
-    height: scaleHeight(4),
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: scaleHeight(2),
     position: 'relative',
@@ -106,7 +107,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF0000',
     borderRadius: 50,
     position: 'absolute',
-    top: '50%',
     transform: [{ translateY: -scaleHeight(6) }],
   },
 });
