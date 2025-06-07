@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import { scaleHeight, scaleWidth } from '../DeviceScale';
+import { scaleHeight, scaleWidth } from '@src/DeviceScale';
 
 interface ProgressBarProps {
   currentTime: number;
