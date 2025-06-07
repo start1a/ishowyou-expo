@@ -30,7 +30,6 @@ export const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({
   duration,
   playHeadWidth,
   smallIconWidth,
-  formatTime,
   onToggleController,
   onPlayToggle,
   onSeekBackward,
@@ -78,7 +77,6 @@ export const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({
               <VideoTimeDisplay
                 currentTime={currentTime}
                 duration={duration}
-                formatTime={formatTime}
               />
 
               <FullScreenButton iconSize={smallIconWidth} />

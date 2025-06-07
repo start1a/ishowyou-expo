@@ -1,22 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, View } from 'react-native';
+import { View } from 'react-native';
 import YoutubePlayer, { PLAYER_STATES, YoutubeIframeRef } from 'react-native-youtube-iframe';
 import { VideoPlayerOverlay } from './VideoPlayerOverlay';
-import { calculatePlayerSize, formatTime } from '@src/utils/videoUtils';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
+import { useOrientation } from '@/src/hooks/useOrientation';
+import { usePlayerSize } from '@/src/hooks/usePlayerSize';
 
 interface VideoPlayerComponentProps {
   videoId: string;
-  isLandscape: boolean;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
 }
 
 export const VideoPlayerComponent: React.FC<VideoPlayerComponentProps> = ({
   videoId,
-  isLandscape,
   onTimeUpdate,
 }) => {
   const playerRef = useRef<YoutubeIframeRef>(null);
+  const isLandscape = useOrientation();
+  const playerSize = usePlayerSize();
   
   // 비디오 상태
   const [isPlaying, setIsPlaying] = useState(false);
@@ -28,7 +29,6 @@ export const VideoPlayerComponent: React.FC<VideoPlayerComponentProps> = ({
   const timeUpdateInterval = useRef<any>(null);
 
   // UI 상태
-  const [playerSize, setPlayerSize] = useState(calculatePlayerSize(isLandscape));
   const [isControllerVisible, setIsControllerVisible] = useState(true);
 
   // 상수
@@ -69,11 +69,6 @@ export const VideoPlayerComponent: React.FC<VideoPlayerComponentProps> = ({
 
   const handleSeekBackward = () => seekTo(-10);
   const handleSeekForward = () => seekTo(10);
-
-  // 플레이어 사이즈 업데이트
-  useEffect(() => {
-    setPlayerSize(calculatePlayerSize(isLandscape));
-  }, [isLandscape]);
 
   // 비디오 시간 정보 업데이트
   useEffect(() => {
@@ -150,7 +145,6 @@ export const VideoPlayerComponent: React.FC<VideoPlayerComponentProps> = ({
         duration={duration}
         playHeadWidth={WIDTH_PLAY_HEAD}
         smallIconWidth={WIDTH_SMALL_ICON}
-        formatTime={formatTime}
         onToggleController={() => setIsControllerVisible(prev => !prev)}
         onPlayToggle={handlePlayToggle}
         onSeekBackward={handleSeekBackward}

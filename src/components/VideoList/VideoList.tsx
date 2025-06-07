@@ -1,8 +1,8 @@
 import React from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { scaleWidth, scaleHeight } from '@src/DeviceScale';
-import { formatTime } from '@src/utils/videoUtils';
 import { VideoData } from '@src/types/VideoData';
+import { VideoUtils } from '@src/utils/VideoUtils';
 
 interface VideoListProps {
     videos: VideoData[];
@@ -10,15 +10,6 @@ interface VideoListProps {
 }
 
 export const VideoList = ({ videos, onVideoSelect }: VideoListProps) => {
-
-    const formatViewCount = (count: number) => {
-        if (count >= 1000000) {
-            return `${(count / 1000000).toFixed(1)}M`;
-        } else if (count >= 1000) {
-            return `${(count / 1000).toFixed(1)}K`;
-        }
-        return count.toString();
-    };
 
     const renderVideoItem = ({ item }: { item: VideoData }) => (
         <TouchableOpacity
@@ -33,10 +24,10 @@ export const VideoList = ({ videos, onVideoSelect }: VideoListProps) => {
                 <Text style={styles.channelName}>{item.channelName}</Text>
                 <View style={styles.metaInfo}>
                     <Text style={styles.metaText}>
-                        {item.viewCount ? `조회수 ${formatViewCount(item.viewCount)}회` : ''}
+                        {VideoUtils.formatViewCountWithLabel(item.viewCount)}
                     </Text>
                     <Text style={styles.metaText}>
-                        {formatTime(item.duration)}
+                        {VideoUtils.formatDuration(item.duration)}
                     </Text>
                 </View>
             </View>

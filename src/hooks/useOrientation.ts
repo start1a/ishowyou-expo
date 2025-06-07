@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Dimensions } from 'react-native';
-import { isLandscapeMode } from '@/src/utils/videoUtils';
+
+const getWindowWidth = () => Dimensions.get('screen').width;
+const getWindowHeight = () => Dimensions.get('screen').height;
+const isLandscapeMode = () => getWindowWidth() > getWindowHeight();
 
 export const useOrientation = () => {
   const [isLandscape, setIsLandscape] = useState(isLandscapeMode());

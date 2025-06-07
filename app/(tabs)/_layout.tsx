@@ -5,7 +5,7 @@ import { Tabs } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-import { useOrientation } from '@/src/hooks/useOrientation';
+import { useOrientationContext } from '@/src/contexts/OrientationContext';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -17,7 +17,7 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const isLandscape = useOrientation();
+  const { isLandscape } = useOrientationContext();
 
   return (
     <Tabs

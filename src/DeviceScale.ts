@@ -1,6 +1,6 @@
 import { Dimensions, PixelRatio } from 'react-native';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+export const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
 
 // 기준 해상도 (iPhone 11 기준)
 const baseWidth = 414;

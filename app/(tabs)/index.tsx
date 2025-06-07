@@ -4,15 +4,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scaleWidth, scaleHeight } from "@src/DeviceScale";
 import { PortraitProgressBar } from "@src/components/ProgressBar";
 import { VideoPlayerComponent } from "@src/components/VideoPlayer";
-import { formatTime } from "@src/utils/videoUtils";
 import { VIDEO_LIST } from "@src/constants/videoData";
 import { VideoList } from "@/src/components/VideoList/VideoList";
-import { useOrientation } from "@/src/hooks/useOrientation";
+import { useOrientationContext } from "@/src/contexts/OrientationContext";
+import { VideoUtils } from "@/src/utils/VideoUtils";
 
 
 export default function TabOneScreen() {
   
-  const isLandscape = useOrientation();
+  const { isLandscape } = useOrientationContext();
   const [selectedVideo, setSelectedVideo] = useState(VIDEO_LIST[0]);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -34,7 +34,6 @@ export default function TabOneScreen() {
       }}>
         <VideoPlayerComponent
           videoId={selectedVideo.videoId}
-          isLandscape={isLandscape}
           onTimeUpdate={(current, total) => {
             setCurrentTime(current);
             setDuration(total);
@@ -47,7 +46,7 @@ export default function TabOneScreen() {
           width: isLandscape ? '35%' : '100%',
         }}>
           <Text style={{ textAlign: 'center', marginTop: scaleHeight(10), fontSize: scaleWidth(16), fontWeight: 'bold' }}>
-            {formatTime(currentTime)} / {formatTime(duration)}
+            {VideoUtils.formatTime(currentTime)} / {VideoUtils.formatTime(duration)}
           </Text>
           <VideoList
             videos={VIDEO_LIST}
