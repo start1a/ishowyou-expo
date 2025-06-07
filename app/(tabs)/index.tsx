@@ -4,14 +4,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scaleWidth, scaleHeight } from "@src/DeviceScale";
 import { PortraitProgressBar } from "@src/components/ProgressBar";
 import { VideoPlayerComponent } from "@src/components/VideoPlayer";
-import { formatTime, isLandscapeMode } from "@src/utils/videoUtils";
+import { formatTime } from "@src/utils/videoUtils";
 import { VIDEO_LIST } from "@src/constants/videoData";
 import { VideoList } from "@/src/components/VideoList/VideoList";
+import { useOrientation } from "@/src/hooks/useOrientation";
 
 
 export default function TabOneScreen() {
   
-  const [isLandscape, setIsLandscape] = useState(isLandscapeMode());
+  const isLandscape = useOrientation();
   const [selectedVideo, setSelectedVideo] = useState(VIDEO_LIST[0]);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -34,7 +35,6 @@ export default function TabOneScreen() {
         <VideoPlayerComponent
           videoId={selectedVideo.videoId}
           isLandscape={isLandscape}
-          onOrientationChange={setIsLandscape}
           onTimeUpdate={(current, total) => {
             setCurrentTime(current);
             setDuration(total);

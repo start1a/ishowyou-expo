@@ -2,20 +2,18 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Dimensions, View } from 'react-native';
 import YoutubePlayer, { PLAYER_STATES, YoutubeIframeRef } from 'react-native-youtube-iframe';
 import { VideoPlayerOverlay } from './VideoPlayerOverlay';
-import { calculatePlayerSize, isLandscapeMode, formatTime } from '@src/utils/videoUtils';
+import { calculatePlayerSize, formatTime } from '@src/utils/videoUtils';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
 
 interface VideoPlayerComponentProps {
   videoId: string;
   isLandscape: boolean;
-  onOrientationChange: (landscape: boolean) => void;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
 }
 
 export const VideoPlayerComponent: React.FC<VideoPlayerComponentProps> = ({
   videoId,
   isLandscape,
-  onOrientationChange,
   onTimeUpdate,
 }) => {
   const playerRef = useRef<YoutubeIframeRef>(null);
@@ -72,18 +70,10 @@ export const VideoPlayerComponent: React.FC<VideoPlayerComponentProps> = ({
   const handleSeekBackward = () => seekTo(-10);
   const handleSeekForward = () => seekTo(10);
 
-  // 오리엔테이션 변경 감지
+  // 플레이어 사이즈 업데이트
   useEffect(() => {
-    const listener = Dimensions.addEventListener('change', ({ window: { width, height } }) => {
-      const landscape = width > height;
-      onOrientationChange(landscape);
-      setPlayerSize(calculatePlayerSize(landscape));
-    });
-    
-    return () => {
-      listener.remove();
-    };
-  }, [onOrientationChange]);
+    setPlayerSize(calculatePlayerSize(isLandscape));
+  }, [isLandscape]);
 
   // 비디오 시간 정보 업데이트
   useEffect(() => {
@@ -91,7 +81,7 @@ export const VideoPlayerComponent: React.FC<VideoPlayerComponentProps> = ({
       try {
         const videoDuration = await playerRef.current?.getDuration();
         if (videoDuration) {
-          console.log(`Video duration: ${videoDuration}`);
+          // console.log(`Video duration: ${videoDuration}`);
           setDuration(videoDuration);
           onTimeUpdate?.(currentTime, videoDuration);
         }
