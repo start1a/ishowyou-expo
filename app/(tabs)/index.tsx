@@ -1,19 +1,24 @@
 import React, { useState } from "react";
 import { SafeAreaView, StatusBar, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { scaleWidth } from "@src/DeviceScale";
+import { scaleWidth, scaleHeight } from "@src/DeviceScale";
 import { PortraitProgressBar } from "@src/components/ProgressBar";
 import { VideoPlayerComponent } from "@src/components/VideoPlayer";
 import { formatTime, isLandscapeMode } from "@src/utils/videoUtils";
+import { VIDEO_LIST } from "@src/constants/videoData";
+import { VideoList } from "@/src/components/VideoList/VideoList";
+
 
 export default function TabOneScreen() {
+  
   const [isLandscape, setIsLandscape] = useState(isLandscapeMode());
-  const [videoId] = useState("iJsWRpSetq0"); // Example video ID - you can change this
+  const [selectedVideo, setSelectedVideo] = useState(VIDEO_LIST[0]);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const insets = useSafeAreaInsets();
 
   const WIDTH_PLAY_HEAD = scaleWidth(15);
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -27,7 +32,7 @@ export default function TabOneScreen() {
         justifyContent: 'center',
       }}>
         <VideoPlayerComponent
-          videoId={videoId}
+          videoId={selectedVideo.videoId}
           isLandscape={isLandscape}
           onOrientationChange={setIsLandscape}
           onTimeUpdate={(current, total) => {
@@ -41,9 +46,13 @@ export default function TabOneScreen() {
           backgroundColor: 'white',
           width: isLandscape ? '35%' : '100%',
         }}>
-          <Text style={{ textAlign: 'center', marginTop: 10 }}>
+          <Text style={{ textAlign: 'center', marginTop: scaleHeight(10), fontSize: scaleWidth(16), fontWeight: 'bold' }}>
             {formatTime(currentTime)} / {formatTime(duration)}
           </Text>
+          <VideoList
+            videos={VIDEO_LIST}
+            onVideoSelect={setSelectedVideo}
+          />
         </View>
 
         {!isLandscape && (
