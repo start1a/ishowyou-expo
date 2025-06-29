@@ -1,20 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform, SafeAreaView, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoom } from '@src/hooks/useRoomApi';
 import { useMember } from '@src/hooks/useMemberApi';
 import { MemberList } from '@src/components/Member';
+import { VideoPlayerComponent } from '@src/components/VideoPlayer';
+import { VideoList } from '@src/components/VideoList/VideoList';
+import { PortraitProgressBar } from '@src/components/ProgressBar';
 import { RoomService } from '@src/api';
+import { useOrientation } from '@src/hooks/useOrientation';
+import { useOrientationContext } from '@src/contexts/OrientationContext';
+import { usePlayerSize } from '@src/hooks/usePlayerSize';
+import { scaleWidth } from '@src/DeviceScale';
+import { VIDEO_LIST } from '@src/constants/videoData';
 
 export default function RoomDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { room, loading, error, refetch } = useRoom(id || '');
   const { updateOnlineStatus } = useMember();
+  const { isLandscape } = useOrientationContext();
+  const insets = useSafeAreaInsets();
+  const { playerHeight } = usePlayerSize();
     
   // 현재 사용자 ID (실제로는 인증 시스템에서 가져와야 함)
   const [currentUserId] = useState('current-user-id');
   const [currentUserRole, setCurrentUserRole] = useState<'owner' | 'admin' | 'member'>('member');
+  
+  // 비디오 플레이어 상태
+  const [selectedVideo, setSelectedVideo] = useState(VIDEO_LIST[0]);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  
+  // 탭 상태 (비디오 목록 또는 방 정보)
+  const [activeTab, setActiveTab] = useState<'videos' | 'room'>('videos');
+  
+  const WIDTH_PLAY_HEAD = scaleWidth(15);
 
   useEffect(() => {
     if (room) {
@@ -115,49 +137,154 @@ export default function RoomDetailScreen() {
 
   const isAdmin = currentUserRole === 'owner' || currentUserRole === 'admin';
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.roomInfo}>
-          <Text style={styles.roomName}>{room.name}</Text>
-          {room.description && (
-            <Text style={styles.roomDescription}>{room.description}</Text>
-          )}
-          <Text style={styles.memberCount}>
-            {room.currentMembers}/{room.maxMembers} 명
-          </Text>
-        </View>
+  // 풀스크린 모드일 때는 비디오 플레이어만 표시
+  if (isLandscape) {
+    return (
+      <View style={{ flex: 1 }}>
+        <StatusBar backgroundColor="#000000" barStyle="light-content" />
+        <View style={{ width: insets.left, position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: 'black' }} />
         
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.leaveButton}
-            onPress={handleLeaveRoom}
-          >
-            <Text style={styles.leaveButtonText}>나가기</Text>
-          </TouchableOpacity>
-          
-          {currentUserRole === 'owner' && (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={handleDeleteRoom}
-            >
-              <Text style={styles.deleteButtonText}>방 삭제</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+        <SafeAreaView style={{
+          flex: 1,
+          flexDirection: 'row',
+          justifyContent: 'center',
+        }}>
+          <VideoPlayerComponent
+            videoId={selectedVideo.videoId}
+            onTimeUpdate={(current, total) => {
+              setCurrentTime(current);
+              setDuration(total);
+            }}
+          />
 
-      <View style={styles.content}>
-        <MemberList
-          members={room.members}
-          currentUserId={currentUserId}
-          roomId={room.id}
-          isAdmin={isAdmin}
-          onMemberUpdate={refetch}
-        />
+          <View style={{
+            flex: 35,
+            backgroundColor: 'white',
+            width: '35%',
+          }}>
+            {renderTabContent()}
+          </View>
+        </SafeAreaView>
       </View>
+    );
+  }
+
+  // 세로 모드
+  return (
+    <View style={{ flex: 1 }}>
+      <StatusBar backgroundColor="#000000" barStyle="light-content" />
+      <View style={{ height: insets.top, backgroundColor: 'black' }} />
+      
+      <SafeAreaView style={{
+        flex: 1,
+        flexDirection: 'column',
+        justifyContent: 'center',
+      }}>
+        <VideoPlayerComponent
+          videoId={selectedVideo.videoId}
+          onTimeUpdate={(current, total) => {
+            setCurrentTime(current);
+            setDuration(total);
+          }}
+        />
+
+        {/* 탭 헤더 */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'videos' && styles.activeTab]}
+            onPress={() => setActiveTab('videos')}
+          >
+            <Text style={[styles.tabText, activeTab === 'videos' && styles.activeTabText]}>
+              비디오 목록
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'room' && styles.activeTab]}
+            onPress={() => setActiveTab('room')}
+          >
+            <Text style={[styles.tabText, activeTab === 'room' && styles.activeTabText]}>
+              방 정보
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 탭 콘텐츠 */}
+        <View style={{
+          flex: 35,
+          backgroundColor: 'white',
+          width: '100%',
+        }}>
+          {renderTabContent()}
+        </View>
+
+        <PortraitProgressBar
+          currentTime={currentTime}
+          duration={duration}
+          playHeadWidth={WIDTH_PLAY_HEAD}
+          playerHeight={playerHeight}
+        />
+      </SafeAreaView>
     </View>
   );
+
+  // 탭 콘텐츠 렌더링 함수
+  function renderTabContent() {
+    if (activeTab === 'videos') {
+      return (
+        <VideoList
+          videos={VIDEO_LIST}
+          onVideoSelect={setSelectedVideo}
+        />
+      );
+    } else {
+      return (
+        <View style={{ flex: 1 }}>
+          {/* 방 정보 헤더 - 고정 영역 */}
+          <View style={styles.roomInfoHeader}>
+            <Text style={styles.roomName}>{room?.name}</Text>
+            {room?.description && (
+              <Text style={styles.roomDescription}>{room.description}</Text>
+            )}
+            <Text style={styles.memberCount}>
+              {room?.currentMembers}/{room?.maxMembers} 명
+            </Text>
+            
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.leaveButton}
+                onPress={handleLeaveRoom}
+              >
+                <Text style={styles.leaveButtonText}>나가기</Text>
+              </TouchableOpacity>
+              
+              {currentUserRole === 'owner' && (
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={handleDeleteRoom}
+                >
+                  <Text style={styles.deleteButtonText}>방 삭제</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+          
+          {/* 참여자 섹션 - 스크롤 가능한 영역 */}
+          <View style={styles.membersSection}>
+            <Text style={styles.sectionTitle}>참여자 ({room?.members.length || 0}명)</Text>
+            {room && (
+              <MemberList
+                members={room.members}
+                currentUserId={currentUserId}
+                roomId={room.id}
+                isAdmin={currentUserRole === 'owner' || currentUserRole === 'admin'}
+                onMemberUpdate={refetch}
+              />
+            )}
+          </View>
+        </View>
+      );
+    }
+  }
 }
 
 const styles = StyleSheet.create({
@@ -165,14 +292,54 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
-    backgroundColor: 'white',
+  videoSection: {
+    backgroundColor: 'black',
+  },
+  content: {
+    flex: 1,
     padding: 16,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  roomInfo: {
-    marginBottom: 16,
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+  },
+  activeTab: {
+    backgroundColor: 'white',
+    borderBottomWidth: 2,
+    borderBottomColor: '#007AFF',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#007AFF',
+  },
+  roomInfoHeader: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    margin: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  membersSection: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   roomName: {
     fontSize: 24,
@@ -190,6 +357,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '600',
+    marginBottom: 16,
   },
   headerActions: {
     flexDirection: 'row',
@@ -218,9 +386,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  content: {
-    flex: 1,
-    padding: 16,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
   },
   centerContainer: {
     flex: 1,

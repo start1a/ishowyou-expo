@@ -1,66 +1,111 @@
-import React, { useState } from "react";
-import { SafeAreaView, StatusBar, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { scaleWidth } from "@src/DeviceScale";
-import { PortraitProgressBar } from "@src/components/ProgressBar";
-import { VideoPlayerComponent } from "@src/components/VideoPlayer";
-import { VIDEO_LIST } from "@src/constants/videoData";
-import { VideoList } from "@/src/components/VideoList/VideoList";
-import { useOrientationContext } from "@/src/contexts/OrientationContext";
-import { usePlayerSize } from "@/src/hooks/usePlayerSize";
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { RoomList, CreateRoomForm } from '@src/components/Room';
+import { Room } from '@src/api/types';
 
+export default function HomeScreen() {
+  const router = useRouter();
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
-export default function TabOneScreen() {
-  
-  const { isLandscape } = useOrientationContext();
-  const [selectedVideo, setSelectedVideo] = useState(VIDEO_LIST[0]);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const insets = useSafeAreaInsets();
-  const { playerHeight } = usePlayerSize();
+  const handleRoomSelect = (room: Room) => {
+    router.push(`/room/${room.id}`);
+  };
 
-  const WIDTH_PLAY_HEAD = scaleWidth(15);
-
+  const handleRoomCreated = (roomId: string) => {
+    setShowCreateModal(false);
+    Alert.alert('성공', '방이 생성되었습니다!', [
+      {
+        text: '확인',
+        onPress: () => {
+          // 생성된 방으로 이동
+          router.push(`/room/${roomId}`);
+        }
+      }
+    ]);
+  };
 
   return (
-    <View style={{ flex: 1 }}>
-      <StatusBar backgroundColor="#000000" barStyle="light-content" />
-      {!isLandscape && <View style={{ height: insets.top, backgroundColor: 'black' }} />}
-      {isLandscape && <View style={{ width: insets.left, position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: 'black' }} />}
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>IsShowYou</Text>
+        <Text style={styles.subtitle}>함께 보는 즐거움</Text>
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={() => setShowCreateModal(true)}
+        >
+          <Text style={styles.createButtonText}>+ 방 만들기</Text>
+        </TouchableOpacity>
+      </View>
       
-      <SafeAreaView style={{
-        flex: 1,
-        flexDirection: isLandscape ? 'row' : 'column',
-        justifyContent: 'center',
-      }}>
-        <VideoPlayerComponent
-          videoId={selectedVideo.videoId}
-          onTimeUpdate={(current, total) => {
-            setCurrentTime(current);
-            setDuration(total);
-          }}
-        />
+      <View style={styles.content}>
+        <Text style={styles.sectionTitle}>참여 가능한 방</Text>
+        <RoomList onRoomSelect={handleRoomSelect} />
+      </View>
 
-        <View style={{
-          flex: 35,
-          backgroundColor: 'white',
-          width: isLandscape ? '35%' : '100%',
-        }}>
-          <VideoList
-            videos={VIDEO_LIST}
-            onVideoSelect={setSelectedVideo}
+      <Modal
+        visible={showCreateModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.modalContainer}>
+          <CreateRoomForm
+            onRoomCreated={handleRoomCreated}
+            onCancel={() => setShowCreateModal(false)}
           />
         </View>
-
-        {!isLandscape && (
-          <PortraitProgressBar
-            currentTime={currentTime}
-            duration={duration}
-            playHeadWidth={WIDTH_PLAY_HEAD}
-            playerHeight={playerHeight} // 임시값, 실제로는 VideoPlayerComponent에서 계산된 값을 받아야 함
-          />
-        )}
-      </SafeAreaView>
+      </Modal>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 20,
+  },
+  createButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  createButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+});
