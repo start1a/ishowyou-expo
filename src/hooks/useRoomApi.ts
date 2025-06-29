@@ -12,14 +12,24 @@ export const useRooms = () => {
     setError(null);
     
     try {
+      console.log('방 목록 불러오기 시작...');
       const response = await RoomService.getRooms();
+      console.log('방 목록 응답:', response);
+      
       if (response.success && response.data) {
+        console.log('방 목록 불러오기 성공, 방 개수:', response.data.length);
         setRooms(response.data);
       } else {
-        setError(response.error || 'Failed to fetch rooms');
+        console.error('방 목록 불러오기 실패:', response.error);
+        setError(response.error || '방 목록을 불러오는데 실패했습니다');
       }
     } catch (err) {
-      setError('Network error occurred');
+      console.error('네트워크 오류:', err);
+      if (err instanceof Error) {
+        setError(`네트워크 오류: ${err.message}`);
+      } else {
+        setError('알 수 없는 네트워크 오류가 발생했습니다');
+      }
     } finally {
       setLoading(false);
     }
