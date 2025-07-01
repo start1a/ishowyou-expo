@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform, SafeAreaView, StatusBar, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoom } from '@src/hooks/useRoomApi';
 import { useMember } from '@src/hooks/useMemberApi';
-import { MemberList } from '@src/components/Member';
+import { ItemRoomMember } from '@src/components/Member';
 import { VideoPlayerComponent } from '@src/components/VideoPlayer';
 import { VideoList } from '@src/components/VideoList/VideoList';
 import { PortraitProgressBar } from '@src/components/ProgressBar';
@@ -37,6 +37,43 @@ export default function RoomDetailScreen() {
   const [activeTab, setActiveTab] = useState<'videos' | 'room'>('videos');
   
   const WIDTH_PLAY_HEAD = scaleWidth(15);
+
+  const { updateMemberRole, removeMember, loading: memberLoading } = useMember();
+
+  const handleRoleChange = async (member: any) => {
+    if (!isAdmin || member.id === currentUserId) return;
+
+    const newRole = member.role === 'admin' ? 'member' : 'admin';
+    const result = await updateMemberRole(id || '', member.id, newRole);
+    
+    if (result) {
+      Alert.alert('성공', `${member.nickname}님의 권한이 변경되었습니다.`);
+      refetch();
+    }
+  };
+
+  const handleRemoveMember = async (member: any) => {
+    if (!isAdmin || member.id === currentUserId || member.role === 'owner') return;
+
+    Alert.alert(
+      '멤버 추방',
+      `${member.nickname}님을 방에서 추방하시겠습니까?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '추방',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await removeMember(id || '', member.id);
+            if (success) {
+              Alert.alert('성공', `${member.nickname}님이 방에서 추방되었습니다.`);
+              refetch();
+            }
+          },
+        },
+      ]
+    );
+  };
 
   useEffect(() => {
     if (room) {
@@ -158,9 +195,11 @@ export default function RoomDetailScreen() {
           />
 
           <View style={{
-            flex: 35,
+            flex: 1,
             backgroundColor: 'white',
             width: '35%',
+            paddingEnd: insets.bottom,
+            paddingBottom: insets.bottom, // 하단 Safe Area 추가
           }}>
             {renderTabContent()}
           </View>
@@ -210,9 +249,10 @@ export default function RoomDetailScreen() {
 
         {/* 탭 콘텐츠 */}
         <View style={{
-          flex: 35,
+          flex: 1,
           backgroundColor: 'white',
           width: '100%',
+          paddingBottom: insets.bottom, // 하단 Safe Area 추가
         }}>
           {renderTabContent()}
         </View>
@@ -222,6 +262,7 @@ export default function RoomDetailScreen() {
           duration={duration}
           playHeadWidth={WIDTH_PLAY_HEAD}
           playerHeight={playerHeight}
+          style={{ bottom: insets.bottom }} // 하단 Safe Area 고려
         />
       </SafeAreaView>
     </View>
@@ -237,51 +278,58 @@ export default function RoomDetailScreen() {
         />
       );
     } else {
-      return (
-        <View style={{ flex: 1 }}>
-          {/* 방 정보 헤더 - 고정 영역 */}
-          <View style={styles.roomInfoHeader}>
-            <Text style={styles.roomName}>{room?.name}</Text>
-            {room?.description && (
-              <Text style={styles.roomDescription}>{room.description}</Text>
-            )}
-            <Text style={styles.memberCount}>
-              {room?.currentMembers}/{room?.maxMembers} 명
-            </Text>
-            
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.leaveButton}
-                onPress={handleLeaveRoom}
-              >
-                <Text style={styles.leaveButtonText}>나가기</Text>
-              </TouchableOpacity>
-              
-              {currentUserRole === 'owner' && (
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={handleDeleteRoom}
-                >
-                  <Text style={styles.deleteButtonText}>방 삭제</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-          
-          {/* 참여자 섹션 - 스크롤 가능한 영역 */}
-          <View style={styles.membersSection}>
-            <Text style={styles.sectionTitle}>참여자 ({room?.members.length || 0}명)</Text>
-            {room && (
-              <MemberList
-                members={room.members}
-                currentUserId={currentUserId}
-                roomId={room.id}
-                isAdmin={currentUserRole === 'owner' || currentUserRole === 'admin'}
-                onMemberUpdate={refetch}
-              />
-            )}
-          </View>
+      const renderRoomHeader = () => (
+        <View style={styles.roomInfoHeader}>
+          <Text style={styles.roomName}>{room?.name}</Text>
+          {room?.description && (
+            <Text style={styles.roomDescription}>{room.description}</Text>
+          )}
+          <Text style={styles.memberCount}>
+            {room?.currentMembers}/{room?.maxMembers} 명
+          </Text>
         </View>
+      );
+
+      const renderMemberItem = ({ item }: { item: any }) => (
+        <ItemRoomMember
+          member={item}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onRoleChange={handleRoleChange}
+          onRemoveMember={handleRemoveMember}
+        />
+      );
+
+      const renderRoomFooter = () => (
+        <View style={styles.bottomActions}>
+          <TouchableOpacity
+            style={styles.leaveButton}
+            onPress={handleLeaveRoom}
+          >
+            <Text style={styles.leaveButtonText}>나가기</Text>
+          </TouchableOpacity>
+          
+          {currentUserRole === 'owner' && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDeleteRoom}
+            >
+              <Text style={styles.deleteButtonText}>방 삭제</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+
+      return (
+        <FlatList
+          data={room?.members || []}
+          renderItem={renderMemberItem}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={renderRoomHeader}
+          ListFooterComponent={renderRoomFooter}
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1 }}
+        />
       );
     }
   }
@@ -328,18 +376,19 @@ const styles = StyleSheet.create({
   roomInfoHeader: {
     backgroundColor: 'white',
     padding: 16,
-    borderRadius: 12,
-    margin: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
-  membersSection: {
-    flex: 1,
+  bottomActions: {
+    flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingVertical: 16,
+    marginTop: 16,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    gap: 12,
+    marginBottom: 20,
   },
   roomName: {
     fontSize: 24,
@@ -357,29 +406,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '600',
-    marginBottom: 16,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    marginBottom: 8,
   },
   leaveButton: {
-    backgroundColor: '#8E8E93',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderRadius: 8,
-    marginRight: 8,
   },
   leaveButtonText: {
-    color: 'white',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   deleteButton: {
     backgroundColor: '#FF3B30',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
+    maxWidth: 120,
   },
   deleteButtonText: {
     color: 'white',
@@ -390,7 +434,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 12,
+    marginTop: 16,
+    marginBottom: 8,
   },
   centerContainer: {
     flex: 1,
