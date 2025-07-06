@@ -10,6 +10,8 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { OrientationProvider } from '@/src/contexts/OrientationContext';
+import { AuthProvider } from '@/src/contexts/AuthContext';
+import AuthNavigator from '@/src/components/Auth/AuthNavigator';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -52,18 +54,17 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
-    <OrientationProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <StatusBar 
-          style="light" 
-          backgroundColor="transparent" 
-          translucent={Platform.OS === 'ios'} 
-        />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        </Stack>
-      </ThemeProvider>
-    </OrientationProvider>
+    <AuthProvider>
+      <OrientationProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <StatusBar 
+            style="light" 
+            backgroundColor="transparent" 
+            translucent={Platform.OS === 'ios'} 
+          />
+          <AuthNavigator />
+        </ThemeProvider>
+      </OrientationProvider>
+    </AuthProvider>
   );
 }
