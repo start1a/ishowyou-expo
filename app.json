@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "ishowyouexpo",
+    "scheme": "com.hglee.ishowyouexpo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,7 +15,9 @@
     },
     "ios": {
       "supportsTablet": true,
-      "orientation": "default"
+      "orientation": "default",
+      "bundleIdentifier": "com.hglee.ishowyouexpo",
+      "googleServicesFile": "./GoogleService-Info.plist",
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +25,9 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "orientation": "default"
+      "orientation": "default",
+      "package": "com.hglee.ishowyouexpo",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +40,12 @@
         "expo-screen-orientation",
         {
           "initialOrientation": "DEFAULT"
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.998057758378-kddnk5l31caa2q22m529afpktgdh5mbf"
         }
       ]
     ],
