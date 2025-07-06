@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "998057758378",
+    "firebase_url": "https://ishowyou-expo-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "ishowyou-expo",
+    "storage_bucket": "ishowyou-expo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:998057758378:android:1e1a28fe08a1b6aac20ad3",
+        "android_client_info": {
+          "package_name": "com.hglee.ishowyouexpo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "998057758378-6ugopvm763jbg184jo01g6h3in6167ul.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hglee.ishowyouexpo",
+            "certificate_hash": "b700c5c83006faf8bc5822a24fc4cebdd21205d7"
+          }
+        },
+        {
+          "client_id": "998057758378-lknfjod377dkcf9ahul1haagl6vvlfdt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSRfEdBXsSQho--dzu-3syDhyh5agffOk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "998057758378-lknfjod377dkcf9ahul1haagl6vvlfdt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

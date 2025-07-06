@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>998057758378-jpn2r885lp9g9r3nt5ahqpj91kk3ger9.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.998057758378-jpn2r885lp9g9r3nt5ahqpj91kk3ger9</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>998057758378-6ugopvm763jbg184jo01g6h3in6167ul.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyA2o1Kh0tJin_2zyDfH53ywauNsFOivwqQ</string>
+	<key>GCM_SENDER_ID</key>
+	<string>998057758378</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.hglee.ishowyouexpo</string>
+	<key>PROJECT_ID</key>
+	<string>ishowyou-expo</string>
+	<key>STORAGE_BUCKET</key>
+	<string>ishowyou-expo.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:998057758378:ios:7a0554f46966c1c4c20ad3</string>
+	<key>DATABASE_URL</key>
+	<string>https://ishowyou-expo-default-rtdb.asia-southeast1.firebasedatabase.app</string>
+</dict>
+</plist>
