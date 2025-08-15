@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
-import { useAuth } from '@/src/contexts/AuthContext';
-import { LoginForm } from './LoginForm';
+import { useAuth } from '@src/contexts/AuthContext';
+import { LoginForm } from '@src/components/Auth/LoginForm';
 
 export default function AuthNavigator() {
   const { user, loading } = useAuth();

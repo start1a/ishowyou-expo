@@ -1,4 +1,5 @@
 import { CreateRoomRequest, RoomService } from '@src/api';
+import { useAuth } from '@src/contexts/AuthContext';
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 
@@ -8,6 +9,7 @@ interface CreateRoomFormProps {
 }
 
 export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onRoomCreated, onCancel }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<CreateRoomRequest>({
     name: '',
     description: '',
@@ -18,6 +20,11 @@ export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onRoomCreated, o
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
+    if (!user) {
+      Alert.alert('오류', '로그인이 필요합니다.');
+      return;
+    }
+
     if (!formData.name.trim()) {
       Alert.alert('오류', '방 이름을 입력해주세요.');
       return;
@@ -30,10 +37,17 @@ export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onRoomCreated, o
 
     setLoading(true);
     try {
-      const response = await RoomService.createRoom({
-        ...formData,
-        password: formData.isPrivate ? formData.password : undefined,
-      });
+      const response = await RoomService.createRoom(
+        {
+          ...formData,
+          password: formData.isPrivate ? formData.password : undefined,
+        },
+        user.uid,
+        {
+          nickname: user.displayName || '익명',
+          avatar: user.photoURL || undefined,
+        }
+      );
 
       if (response.success && response.data) {
         Alert.alert('성공', '방이 생성되었습니다!');

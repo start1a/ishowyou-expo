@@ -3,9 +3,9 @@ import { TouchableOpacity, View } from 'react-native';
 import { PLAYER_STATES } from 'react-native-youtube-iframe';
 import { scaleWidth } from '@src/DeviceScale';
 import { LandscapeProgressBar } from '@src/components/ProgressBar';
-import { VideoPlayerControls } from './VideoPlayerControls';
-import { VideoTimeDisplay } from './VideoTimeDisplay';
-import { FullScreenButton } from './FullScreenButton';
+import { VideoPlayerControls } from '@src/components/VideoPlayer/VideoPlayerControls';
+import { VideoTimeDisplay } from '@src/components/VideoPlayer/VideoTimeDisplay';
+import { FullScreenButton } from '@src/components/VideoPlayer/FullScreenButton';
 
 interface VideoPlayerOverlayProps {
   isControllerVisible: boolean;

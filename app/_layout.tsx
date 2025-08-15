@@ -9,9 +9,9 @@ import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
-import { OrientationProvider } from '@/src/contexts/OrientationContext';
-import { AuthProvider } from '@/src/contexts/AuthContext';
-import AuthNavigator from '@/src/components/Auth/AuthNavigator';
+import { OrientationProvider } from '@src/contexts/OrientationContext';
+import { AuthProvider } from '@src/contexts/AuthContext';
+import AuthNavigator from '@src/components/Auth/AuthNavigator';
 
 export {
   // Catch any errors thrown by the Layout component.

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useOrientation } from './useOrientation';
+import { useOrientation } from '@src/hooks/useOrientation';
 import { Dimensions } from 'react-native';
 
 export const usePlayerSize = () => {

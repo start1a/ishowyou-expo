@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { scaleHeight } from '@src/DeviceScale';
-import { VideoUtils } from '@/src/utils/VideoUtils';
+import { VideoUtils } from '@src/utils/VideoUtils';
 
 interface VideoTimeDisplayProps {
   currentTime: number;

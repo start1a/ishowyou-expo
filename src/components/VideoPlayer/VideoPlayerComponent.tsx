@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import YoutubePlayer, { PLAYER_STATES, YoutubeIframeRef } from 'react-native-youtube-iframe';
-import { VideoPlayerOverlay } from './VideoPlayerOverlay';
+import { VideoPlayerOverlay } from '@src/components/VideoPlayer/VideoPlayerOverlay';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
-import { useOrientation } from '@/src/hooks/useOrientation';
-import { usePlayerSize } from '@/src/hooks/usePlayerSize';
+import { useOrientation } from '@src/hooks/useOrientation';
+import { usePlayerSize } from '@src/hooks/usePlayerSize';
 
 interface VideoPlayerComponentProps {
   videoId: string;

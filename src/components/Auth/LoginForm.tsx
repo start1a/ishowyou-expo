@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useAuth } from '@/src/contexts/AuthContext';
+import { useAuth } from '@src/contexts/AuthContext';
 
 export const LoginForm: React.FC = () => {
   const { googleLogin, loading } = useAuth();
