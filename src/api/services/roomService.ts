@@ -97,7 +97,7 @@ export class RoomService {
   }
 
   // 방 생성
-  static async createRoom(roomData: CreateRoomRequest): Promise<ApiResponse<Room>> {
+  static async createRoom(roomData: CreateRoomRequest, creatorId: string, creatorInfo: { nickname: string; avatar?: string }): Promise<ApiResponse<Room>> {
     if (API_CONFIG.USE_MOCK) {
       await this.mockDelay();
       const newRoom: Room = {
@@ -106,10 +106,11 @@ export class RoomService {
         currentMembers: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
-        createdBy: 'current-user-id',
+        createdBy: creatorId,
         members: [{
-          id: 'current-user-id',
-          nickname: '방장',
+          id: creatorId,
+          nickname: creatorInfo.nickname,
+          avatar: creatorInfo.avatar,
           isOnline: true,
           joinedAt: new Date(),
           role: 'owner'
@@ -128,10 +129,11 @@ export class RoomService {
         currentMembers: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
-        createdBy: 'current-user-id',
+        createdBy: creatorId,
         members: [{
-          id: 'current-user-id',
-          nickname: '방장',
+          id: creatorId,
+          nickname: creatorInfo.nickname,
+          avatar: creatorInfo.avatar,
           isOnline: true,
           joinedAt: new Date(),
           role: 'owner' as const
@@ -181,11 +183,10 @@ export class RoomService {
       
       const roomData = snapshot.val();
       
-      // 이미 참여한 멤버인지 확인 (현재 사용자 ID는 임시로 생성)
-      const currentUserId = `user-${Date.now()}`;
-      const isAlreadyMember = roomData.members?.some((member: any) => member.nickname === joinData.memberInfo.nickname);
+      // 이미 참여한 멤버인지 확인
+      const isAlreadyMember = roomData.members?.some((member: any) => member.id === joinData.memberId);
       if (isAlreadyMember) {
-        return { success: false, error: '이미 같은 닉네임으로 참여한 사용자가 있습니다' };
+        return { success: false, error: '이미 참여한 사용자입니다' };
       }
       
       // 방이 가득 찬지 확인
@@ -195,7 +196,7 @@ export class RoomService {
       
       // 새 멤버 추가
       const newMember = {
-        id: currentUserId,
+        id: joinData.memberId,
         nickname: joinData.memberInfo.nickname,
         avatar: joinData.memberInfo.avatar,
         isOnline: true,
@@ -235,7 +236,38 @@ export class RoomService {
       return createMockApiResponse(undefined);
     }
     
-    return apiClient.post<void>(ENDPOINTS.LEAVE_ROOM, { roomId, memberId });
+    // Firebase Realtime Database 사용
+    try {
+      const roomRef = ref(database, `rooms/${roomId}`);
+      const snapshot = await get(roomRef);
+      
+      if (!snapshot.exists()) {
+        return { success: false, error: '방을 찾을 수 없습니다' };
+      }
+      
+      const roomData = snapshot.val();
+      const updatedMembers = (roomData.members || []).filter((member: any) => member.id !== memberId);
+      
+      const updates = {
+        members: updatedMembers,
+        currentMembers: updatedMembers.length,
+        updatedAt: new Date()
+      };
+      
+      await update(roomRef, updates);
+      
+      // 세션에서도 제거
+      const sessionMemberRef = ref(database, `sessions/${roomId}/members/${memberId}`);
+      await remove(sessionMemberRef);
+      
+      return { success: true, data: undefined };
+    } catch (error) {
+      console.error('Firebase 방 나가기 오류:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : '방 나가기에 실패했습니다' 
+      };
+    }
   }
 
   // 방 정보 수정
