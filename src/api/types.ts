@@ -31,6 +31,7 @@ export interface CreateRoomRequest {
 
 export interface JoinRoomRequest {
   roomId: string;
+  memberId: string;
   password?: string;
   memberInfo: {
     nickname: string;
@@ -48,4 +49,22 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+}
+
+// Session-related types for real-time functionality
+export interface SessionMember {
+  id: string;
+  nickname: string;
+  avatar?: string;
+  isOnline: boolean;
+  lastSeen: number;
+  joinedAt: number;
+  role: 'owner' | 'admin' | 'member';
+}
+
+export interface RoomSession {
+  roomId: string;
+  members: { [memberId: string]: SessionMember };
+  createdAt: number;
+  updatedAt: number;
 }
