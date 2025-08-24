@@ -3,12 +3,13 @@ import { useAuth } from '@src/contexts/AuthContext';
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 
-interface CreateRoomFormProps {
+interface Props {
   onRoomCreated?: (roomId: string) => void;
   onCancel?: () => void;
 }
 
-export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onRoomCreated, onCancel }) => {
+export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
+
   const { user } = useAuth();
   const [formData, setFormData] = useState<CreateRoomRequest>({
     name: '',
@@ -16,7 +17,7 @@ export const CreateRoomForm: React.FC<CreateRoomFormProps> = ({ onRoomCreated, o
     maxMembers: 10,
     isPrivate: false,
     password: '',
-  });
+  });CreateRoomForm
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {

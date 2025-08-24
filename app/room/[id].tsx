@@ -17,7 +17,8 @@ import { usePlayerSize } from '@src/hooks/usePlayerSize';
 import { scaleWidth } from '@src/DeviceScale';
 import { VIDEO_LIST } from '@src/constants/videoData';
 
-export default function RoomDetailScreen() {
+const RoomDetailScreen = () => {
+  
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -487,3 +488,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+
+export default RoomDetailScreen;

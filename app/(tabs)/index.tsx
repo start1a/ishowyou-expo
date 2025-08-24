@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { RoomList, CreateRoomForm } from '@src/components/Room';
 import { Room } from '@src/api/types';
 
-export default function HomeScreen() {
+const HomeScreen = () => {
   const router = useRouter();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -57,7 +57,9 @@ export default function HomeScreen() {
       </Modal>
     </View>
   );
-}
+};
+
+export default HomeScreen;
 
 const styles = StyleSheet.create({
   container: {

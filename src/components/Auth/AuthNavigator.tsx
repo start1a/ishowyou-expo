@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 import { useAuth } from '@src/contexts/AuthContext';
 import { LoginForm } from '@src/components/Auth/LoginForm';
 
-export default function AuthNavigator() {
+const AuthNavigator = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -30,7 +30,7 @@ export default function AuthNavigator() {
       <Stack.Screen name="room/[id]" options={{ headerShown: false }} />
     </Stack>
   );
-}
+};
 
 const styles = StyleSheet.create({
   loadingContainer: {
@@ -44,3 +44,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
 });
+
+export default AuthNavigator;
