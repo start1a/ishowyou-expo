@@ -50,7 +50,7 @@ export const LoginForm: React.FC = () => {
       <View style={styles.formContainer}>
         <View style={styles.logoContainer}>
           <Text style={styles.logoText}>📺</Text>
-          <Text style={styles.title}>IsShowYou</Text>
+          <Text style={styles.title}>IShowYou</Text>
           <Text style={styles.subtitle}>함께 보는 즐거움</Text>
         </View>
 

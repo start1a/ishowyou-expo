@@ -28,7 +28,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>IsShowYou</Text>
+        <Text style={styles.title}>IShowYou</Text>
         <Text style={styles.subtitle}>함께 보는 즐거움</Text>
         <TouchableOpacity
           style={styles.createButton}
