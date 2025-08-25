@@ -8,7 +8,7 @@ interface FullScreenButtonProps {
   iconSize: number;
 }
 
-export const FullScreenButton: React.FC<FullScreenButtonProps> = ({ iconSize }) => {
+export const FullScreenButton = ({ iconSize }: FullScreenButtonProps) => {
   const handleFullScreenToggle = async () => {
     try {
       const currentOrientation = await ScreenOrientation.getOrientationAsync();

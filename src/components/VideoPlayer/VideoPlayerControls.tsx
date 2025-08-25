@@ -18,13 +18,13 @@ interface VideoPlayerControlsProps {
   onSeekForward: () => void;
 }
 
-export const VideoPlayerControls: React.FC<VideoPlayerControlsProps> = ({
+export const VideoPlayerControls = ({
   playingState,
   isLandscape,
   onPlayToggle,
   onSeekBackward,
   onSeekForward,
-}) => {
+}: VideoPlayerControlsProps) => {
   const WIDTH_ICON_PLAY = isLandscape ? '70%' : '50%';
 
   const renderPlayingIcon = () => {

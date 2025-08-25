@@ -10,13 +10,13 @@ interface ItemRoomMemberProps {
   onRemoveMember: (member: Member) => void;
 }
 
-export const ItemRoomMember: React.FC<ItemRoomMemberProps> = ({
+export const ItemRoomMember = ({
   member,
   currentUserId,
   isAdmin,
   onRoleChange,
   onRemoveMember,
-}) => {
+}: ItemRoomMemberProps) => {
   const isCurrentUser = member.id === currentUserId;
   const canManage = isAdmin && !isCurrentUser && member.role !== 'owner';
 

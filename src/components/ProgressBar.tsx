@@ -10,13 +10,13 @@ interface ProgressBarProps {
   style?: any;
 }
 
-export const PortraitProgressBar: React.FC<ProgressBarProps> = ({ 
+export const PortraitProgressBar = ({ 
   currentTime, 
   duration, 
   playHeadWidth, 
   playerHeight = 0,
   style 
-}) => {
+}: ProgressBarProps) => {
   const progress = duration > 0 ? currentTime / duration : 0;
   const screenWidth = Dimensions.get('window').width;
 
@@ -48,11 +48,11 @@ export const PortraitProgressBar: React.FC<ProgressBarProps> = ({
   );
 };
 
-export const LandscapeProgressBar: React.FC<ProgressBarProps> = ({ 
+export const LandscapeProgressBar = ({ 
   currentTime, 
   duration, 
   playHeadWidth 
-}) => {
+}: ProgressBarProps) => {
   const progress = duration > 0 ? currentTime / duration : 0;
   
   return (

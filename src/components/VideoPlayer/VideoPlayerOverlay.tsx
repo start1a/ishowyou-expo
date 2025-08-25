@@ -21,7 +21,7 @@ interface VideoPlayerOverlayProps {
   onSeekForward: () => void;
 }
 
-export const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({
+export const VideoPlayerOverlay = ({
   isControllerVisible,
   isLandscape,
   playingState,
@@ -33,7 +33,7 @@ export const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({
   onPlayToggle,
   onSeekBackward,
   onSeekForward,
-}) => {
+}: VideoPlayerOverlayProps) => {
   return (
     <TouchableOpacity
       style={[

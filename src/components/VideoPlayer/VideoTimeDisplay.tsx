@@ -8,10 +8,10 @@ interface VideoTimeDisplayProps {
   duration: number;
 }
 
-export const VideoTimeDisplay: React.FC<VideoTimeDisplayProps> = ({
+export const VideoTimeDisplay = ({
   currentTime,
   duration,
-}) => {
+}: VideoTimeDisplayProps) => {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
       <Text style={{ color: 'white', fontSize: scaleHeight(10) }}>

@@ -7,7 +7,7 @@ interface RoomListProps {
   onRoomSelect?: (room: Room) => void;
 }
 
-export const RoomList: React.FC<RoomListProps> = ({ onRoomSelect }) => {
+export const RoomList = ({ onRoomSelect }: RoomListProps) => {
   const { rooms, loading, error, refetch } = useRooms();
 
   const renderRoom = ({ item }: { item: Room }) => (

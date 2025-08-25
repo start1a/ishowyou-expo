@@ -11,10 +11,10 @@ interface VideoPlayerComponentProps {
   onTimeUpdate?: (currentTime: number, duration: number) => void;
 }
 
-export const VideoPlayerComponent: React.FC<VideoPlayerComponentProps> = ({
+export const VideoPlayerComponent = ({
   videoId,
   onTimeUpdate,
-}) => {
+}: VideoPlayerComponentProps) => {
   const playerRef = useRef<YoutubeIframeRef>(null);
   const isLandscape = useOrientation();
   const { playerHeight } = usePlayerSize();

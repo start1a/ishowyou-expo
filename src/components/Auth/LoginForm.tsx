@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '@src/contexts/AuthContext';
 
-export const LoginForm: React.FC = () => {
+export const LoginForm = () => {
   const { googleLogin, loading } = useAuth();
 
   const handleGoogleLogin = async () => {

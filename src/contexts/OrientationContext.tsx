@@ -13,7 +13,7 @@ interface OrientationProviderProps {
   children: ReactNode;
 }
 
-export const OrientationProvider: React.FC<OrientationProviderProps> = ({ children }) => {
+export const OrientationProvider = ({ children }: OrientationProviderProps) => {
   const getWindowDimensions = () => {
     const { width, height } = Dimensions.get('screen');
     return {
