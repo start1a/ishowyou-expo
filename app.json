@@ -18,6 +18,7 @@
       "orientation": "default",
       "bundleIdentifier": "com.hglee.ishowyouexpo",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "appleTeamId": "4PNUH5D6BP"
     },
     "android": {
       "adaptiveIcon": {
@@ -46,6 +47,14 @@
         "@react-native-google-signin/google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.998057758378-kddnk5l31caa2q22m529afpktgdh5mbf"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
         }
       ]
     ],
