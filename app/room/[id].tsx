@@ -55,7 +55,6 @@ const RoomDetailScreen = () => {
 
     if (result) {
       Alert.alert('성공', `${member.displayName}님의 권한이 변경되었습니다.`);
-      refetch();
     }
   };
 
@@ -74,7 +73,6 @@ const RoomDetailScreen = () => {
             const success = await removeMember(id || '', member.userId);
             if (success) {
               Alert.alert('성공', `${member.displayName}님이 방에서 추방되었습니다.`);
-              refetch();
             }
           },
         },
