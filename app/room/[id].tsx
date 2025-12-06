@@ -16,6 +16,7 @@ import { useOrientationContext } from '@src/contexts/OrientationContext';
 import { usePlayerSize } from '@src/hooks/usePlayerSize';
 import { scaleWidth } from '@src/DeviceScale';
 import { VIDEO_LIST } from '@src/constants/videoData';
+import { colors, spacing, sizes, typography } from '@src/theme';
 
 const RoomDetailScreen = () => {
 
@@ -175,7 +176,7 @@ const RoomDetailScreen = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <Text>방 정보를 불러오는 중...</Text>
+        <Text style={styles.loadingText}>방 정보를 불러오는 중...</Text>
       </View>
     );
   }
@@ -194,7 +195,7 @@ const RoomDetailScreen = () => {
   if (!room) {
     return (
       <View style={styles.centerContainer}>
-        <Text>방을 찾을 수 없습니다.</Text>
+        <Text style={styles.loadingText}>방을 찾을 수 없습니다.</Text>
       </View>
     );
   }
@@ -205,8 +206,8 @@ const RoomDetailScreen = () => {
   if (isLandscape) {
     return (
       <View style={{ flex: 1 }}>
-        <StatusBar backgroundColor="#000000" barStyle="light-content" />
-        <View style={{ width: insets.left, position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: 'black' }} />
+        <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
+        <View style={{ width: insets.left, position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: colors.backgroundDark }} />
 
         <SafeAreaView style={{
           flex: 1,
@@ -223,10 +224,10 @@ const RoomDetailScreen = () => {
 
           <View style={{
             flex: 1,
-            backgroundColor: 'white',
+            backgroundColor: colors.backgroundCard,
             width: '35%',
             paddingEnd: insets.bottom,
-            paddingBottom: insets.bottom, // 하단 Safe Area 추가
+            paddingBottom: insets.bottom,
           }}>
             {renderTabContent()}
           </View>
@@ -238,8 +239,8 @@ const RoomDetailScreen = () => {
   // 세로 모드
   return (
     <View style={{ flex: 1 }}>
-      <StatusBar backgroundColor="#000000" barStyle="light-content" />
-      <View style={{ height: insets.top, backgroundColor: 'black' }} />
+      <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
+      <View style={{ height: insets.top, backgroundColor: colors.backgroundDark }} />
 
       <SafeAreaView style={{
         flex: 1,
@@ -277,9 +278,9 @@ const RoomDetailScreen = () => {
         {/* 탭 콘텐츠 */}
         <View style={{
           flex: 1,
-          backgroundColor: 'white',
+          backgroundColor: colors.backgroundCard,
           width: '100%',
-          paddingBottom: insets.bottom, // 하단 Safe Area 추가
+          paddingBottom: insets.bottom,
         }}>
           {renderTabContent()}
         </View>
@@ -289,7 +290,7 @@ const RoomDetailScreen = () => {
           duration={duration}
           playHeadWidth={WIDTH_PLAY_HEAD}
           playerHeight={playerHeight}
-          style={{ bottom: insets.bottom }} // 하단 Safe Area 고려
+          style={{ bottom: insets.bottom }}
         />
       </SafeAreaView>
     </View>
@@ -365,127 +366,126 @@ const RoomDetailScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   videoSection: {
-    backgroundColor: 'black',
+    backgroundColor: colors.backgroundDark,
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: spacing.lg,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundElevated,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundElevated,
   },
   activeTab: {
-    backgroundColor: 'white',
+    backgroundColor: colors.backgroundCard,
     borderBottomWidth: 2,
-    borderBottomColor: '#007AFF',
+    borderBottomColor: colors.primary,
   },
   tabText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
   },
   activeTabText: {
-    color: '#007AFF',
+    color: colors.primary,
   },
   roomInfoHeader: {
-    backgroundColor: 'white',
-    padding: 16,
+    backgroundColor: colors.backgroundCard,
+    padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   bottomActions: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginTop: 16,
-    backgroundColor: 'white',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    marginTop: spacing.lg,
+    backgroundColor: colors.backgroundCard,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    gap: 12,
-    marginBottom: 20,
+    borderTopColor: colors.border,
+    gap: spacing.md,
+    marginBottom: spacing.xl,
   },
   roomName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    ...typography.h2,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   roomDescription: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 8,
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
     lineHeight: 22,
   },
   memberCount: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-    marginBottom: 8,
+    ...typography.caption,
+    color: colors.primary,
+    marginBottom: spacing.sm,
   },
   leaveButton: {
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: spacing.md,
+    borderRadius: sizes.radiusMd,
   },
   leaveButtonText: {
-    fontSize: 14,
-    fontWeight: '400',
+    ...typography.bodySmall,
+    color: colors.textSecondary,
   },
   deleteButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: colors.error,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: sizes.radiusMd,
     flex: 1,
     alignItems: 'center',
     maxWidth: 120,
   },
   deleteButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.buttonSmall,
+    color: colors.textOnPrimary,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
+    ...typography.h4,
+    color: colors.textPrimary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.xl,
+    backgroundColor: colors.backgroundDark,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
   errorText: {
-    fontSize: 16,
-    color: '#FF3B30',
+    ...typography.body,
+    color: colors.error,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: sizes.radiusMd,
   },
   retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.button,
+    color: colors.textOnPrimary,
   },
 });
 

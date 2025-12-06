@@ -1,4 +1,4 @@
-import { colors, sizes } from './index';
+import { colors, sizes, spacing } from './index';
 
 /**
  * VideoPlayer 전용 테마
@@ -7,12 +7,26 @@ import { colors, sizes } from './index';
 export const VIDEO_PLAYER_THEME = {
   colors: {
     overlayBackground: colors.overlay50,
+    overlayBackgroundHeavy: colors.overlay70,
     text: colors.textOnDark,
     textSecondary: colors.textMuted,
     icon: colors.textOnDark,
+    iconActive: colors.primary,
+    progressTrack: 'rgba(255, 255, 255, 0.3)',
+    progressFill: colors.primary,
+    progressBuffer: 'rgba(255, 255, 255, 0.5)',
   },
   sizes: {
     buttonRadius: sizes.radiusFull,
-    timePillRadius: sizes.radiusLg + 4, // 24
+    timePillRadius: sizes.radiusXl,
+    controlIconSize: sizes.iconLg,
+    smallIconSize: sizes.iconMd,
+    progressBarHeight: 4,
+    progressBarHeightActive: 6,
+  },
+  spacing: {
+    controlsPadding: spacing.lg,
+    buttonGap: spacing.xxl,
+    timePillPadding: spacing.sm,
   },
 } as const;

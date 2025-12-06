@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { useAuth } from '@src/contexts/AuthContext';
-import { colors, spacing, sizes } from '@src/theme';
+import { colors, spacing, sizes, typography, shadows } from '@src/theme';
 
 export const LoginForm = () => {
   const { googleLogin, loading } = useAuth();
@@ -104,45 +104,36 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundCard,
     borderRadius: sizes.radiusLg,
     padding: spacing.xxxl,
-    shadowColor: colors.backgroundDark,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
+    ...shadows.xl,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: spacing.xxxxl,
   },
   logoText: {
     fontSize: 48,
     marginBottom: spacing.lg,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.textOnDark,
+    ...typography.h1,
+    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
+    ...typography.body,
     color: colors.textMuted,
   },
   loginSection: {
     alignItems: 'center',
   },
   welcomeText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.textOnDark,
+    ...typography.h2,
+    color: colors.textPrimary,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   descriptionText: {
-    fontSize: 16,
+    ...typography.body,
     color: colors.textMuted,
     textAlign: 'center',
     marginBottom: spacing.xxxl,
@@ -152,39 +143,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: sizes.radiusMd,
     padding: spacing.lg,
     marginBottom: spacing.xxxl,
     width: '100%',
-    shadowColor: colors.backgroundDark,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.md,
   },
   disabledButton: {
-    backgroundColor: colors.backgroundGray,
+    backgroundColor: colors.disabled,
   },
   googleIcon: {
     fontSize: 20,
     marginRight: spacing.md,
   },
   googleButtonText: {
+    ...typography.button,
     color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '600',
   },
   infoContainer: {
     alignItems: 'flex-start',
     width: '100%',
   },
   infoText: {
+    ...typography.bodySmall,
     color: colors.textSecondary,
-    fontSize: 14,
     marginBottom: spacing.sm,
     lineHeight: 20,
   },

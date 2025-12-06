@@ -1,5 +1,6 @@
 import { CreateRoomRequest, RoomService } from '@src/api';
 import { useAuth } from '@src/contexts/AuthContext';
+import { colors, spacing, sizes, typography } from '@src/theme';
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 
@@ -17,7 +18,7 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
     maxMembers: 10,
     isPrivate: false,
     password: '',
-  });CreateRoomForm
+  });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -66,7 +67,7 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>새 방 만들기</Text>
-      
+
       <View style={styles.inputGroup}>
         <Text style={styles.label}>방 이름 *</Text>
         <TextInput
@@ -74,6 +75,7 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
           value={formData.name}
           onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
           placeholder="방 이름을 입력하세요"
+          placeholderTextColor={colors.textMuted}
           maxLength={50}
         />
       </View>
@@ -85,6 +87,7 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
           value={formData.description}
           onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
           placeholder="방에 대한 설명을 입력하세요"
+          placeholderTextColor={colors.textMuted}
           multiline
           numberOfLines={3}
           maxLength={200}
@@ -101,6 +104,7 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
             setFormData(prev => ({ ...prev, maxMembers: Math.min(Math.max(num, 1), 100) }));
           }}
           placeholder="최대 인원"
+          placeholderTextColor={colors.textMuted}
           keyboardType="numeric"
         />
       </View>
@@ -125,6 +129,7 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
             value={formData.password}
             onChangeText={(text) => setFormData(prev => ({ ...prev, password: text }))}
             placeholder="비밀번호를 입력하세요"
+            placeholderTextColor={colors.textMuted}
             secureTextEntry
             maxLength={20}
           />
@@ -139,9 +144,9 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
         >
           <Text style={styles.cancelButtonText}>취소</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
-          style={[styles.button, styles.createButton]}
+          style={[styles.button, styles.createButton, loading && styles.buttonDisabled]}
           onPress={handleSubmit}
           disabled={loading}
         >
@@ -156,38 +161,38 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: 'white',
+    padding: spacing.xl,
+    backgroundColor: colors.backgroundCard,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    ...typography.h2,
+    color: colors.textPrimary,
+    marginBottom: spacing.xl,
     textAlign: 'center',
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
+    ...typography.bodyMedium,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    borderColor: colors.border,
+    borderRadius: sizes.radiusMd,
+    padding: spacing.md,
+    ...typography.body,
+    color: colors.textPrimary,
+    backgroundColor: colors.backgroundElevated,
   },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
   },
   checkboxGroup: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   checkbox: {
     flexDirection: 'row',
@@ -197,51 +202,54 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 2,
-    borderColor: '#ddd',
-    borderRadius: 4,
-    marginRight: 8,
+    borderColor: colors.border,
+    borderRadius: sizes.radiusXs,
+    marginRight: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   checkmark: {
-    color: 'white',
+    color: colors.textOnPrimary,
     fontSize: 12,
     fontWeight: 'bold',
   },
   checkboxLabel: {
-    fontSize: 16,
-    color: '#333',
+    ...typography.body,
+    color: colors.textPrimary,
   },
   buttonGroup: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: spacing.xl,
+    gap: spacing.md,
   },
   button: {
     flex: 1,
-    padding: 16,
-    borderRadius: 8,
+    padding: spacing.lg,
+    borderRadius: sizes.radiusMd,
     alignItems: 'center',
-    marginHorizontal: 8,
   },
   cancelButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   createButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
+  },
+  buttonDisabled: {
+    backgroundColor: colors.disabled,
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+    ...typography.button,
+    color: colors.textSecondary,
   },
   createButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
+    ...typography.button,
+    color: colors.textOnPrimary,
   },
 });

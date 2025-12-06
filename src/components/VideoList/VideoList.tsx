@@ -3,6 +3,7 @@ import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react
 import { scaleWidth, scaleHeight } from '@src/DeviceScale';
 import { VideoData } from '@src/types/VideoData';
 import { VideoUtils } from '@src/utils/VideoUtils';
+import { colors, spacing, sizes, typography, shadows } from '@src/theme';
 
 interface VideoListProps {
     videos: VideoData[];
@@ -15,6 +16,7 @@ export const VideoList = ({ videos, onVideoSelect }: VideoListProps) => {
         <TouchableOpacity
             style={styles.videoItem}
             onPress={() => onVideoSelect(item)}
+            activeOpacity={0.7}
         >
             <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
             <View style={styles.videoInfo}>
@@ -48,46 +50,41 @@ export const VideoList = ({ videos, onVideoSelect }: VideoListProps) => {
 const styles = StyleSheet.create({
     videoList: {
         flex: 1,
-        paddingHorizontal: scaleWidth(16),
-        paddingTop: scaleHeight(8),
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.sm,
     },
     videoItem: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
-        marginBottom: scaleHeight(16),
-        borderRadius: scaleWidth(12),
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: scaleHeight(2),
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: scaleWidth(4),
-        elevation: 3,
+        backgroundColor: colors.surfaceCard,
+        marginBottom: spacing.lg,
+        borderRadius: sizes.radiusMd,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        ...shadows.sm,
         overflow: 'hidden',
     },
     thumbnail: {
         width: scaleWidth(120),
         height: scaleHeight(90),
-        borderTopLeftRadius: scaleWidth(12),
-        borderBottomLeftRadius: scaleWidth(12),
+        borderTopLeftRadius: sizes.radiusMd,
+        borderBottomLeftRadius: sizes.radiusMd,
     },
     videoInfo: {
         flex: 1,
-        padding: scaleWidth(12),
+        padding: spacing.md,
         justifyContent: 'space-between',
     },
     title: {
-        fontSize: scaleWidth(14),
+        ...typography.bodySmall,
         fontWeight: '600',
-        color: '#333',
-        marginBottom: scaleHeight(4),
-        lineHeight: scaleHeight(18),
+        color: colors.textPrimary,
+        marginBottom: spacing.xs,
+        lineHeight: 18,
     },
     channelName: {
-        fontSize: scaleWidth(12),
-        color: '#666',
-        marginBottom: scaleHeight(6),
+        ...typography.caption,
+        color: colors.textSecondary,
+        marginBottom: spacing.sm,
     },
     metaInfo: {
         flexDirection: 'row',
@@ -95,7 +92,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     metaText: {
-        fontSize: scaleWidth(11),
-        color: '#888',
+        fontSize: 11,
+        color: colors.textMuted,
     },
 });

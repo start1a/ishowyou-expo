@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRooms } from '@src/hooks/useRoomApi';
 import { Room } from '@src/api/types';
-import { colors, spacing, sizes } from '@src/theme';
+import { colors, spacing, sizes, typography, shadows } from '@src/theme';
 
 interface RoomListProps {
   onRoomSelect?: (room: Room) => void;
@@ -15,6 +15,7 @@ export const RoomList = ({ onRoomSelect }: RoomListProps) => {
     <TouchableOpacity
       style={styles.roomItem}
       onPress={() => onRoomSelect?.(item)}
+      activeOpacity={0.7}
     >
       <View style={styles.roomHeader}>
         <Text style={styles.roomName}>{item.name}</Text>
@@ -26,7 +27,9 @@ export const RoomList = ({ onRoomSelect }: RoomListProps) => {
       </View>
 
       {item.description && (
-        <Text style={styles.roomDescription}>{item.description}</Text>
+        <Text style={styles.roomDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
       )}
 
       <View style={styles.roomFooter}>
@@ -43,7 +46,7 @@ export const RoomList = ({ onRoomSelect }: RoomListProps) => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <Text>방 목록을 불러오는 중...</Text>
+        <Text style={styles.loadingText}>방 목록을 불러오는 중...</Text>
       </View>
     );
   }
@@ -85,18 +88,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    padding: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   roomItem: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.surfaceCard,
     borderRadius: sizes.radiusMd,
     padding: spacing.lg,
     marginBottom: spacing.md,
-    elevation: 2,
-    shadowColor: colors.backgroundDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...shadows.sm,
   },
   roomHeader: {
     flexDirection: 'row',
@@ -105,22 +106,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   roomName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...typography.h4,
     color: colors.textPrimary,
     flex: 1,
   },
   privateIndicator: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.backgroundElevated,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: sizes.radiusMd,
+    borderRadius: sizes.radiusSm,
   },
   privateText: {
     fontSize: 12,
   },
   roomDescription: {
-    fontSize: 14,
+    ...typography.bodySmall,
     color: colors.textSecondary,
     marginBottom: spacing.md,
     lineHeight: 20,
@@ -131,12 +131,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   memberCount: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.caption,
     color: colors.primary,
   },
   createdDate: {
-    fontSize: 12,
+    ...typography.caption,
     color: colors.textMuted,
   },
   centerContainer: {
@@ -145,26 +144,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
   },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
   errorText: {
-    fontSize: 16,
+    ...typography.body,
     color: colors.error,
     textAlign: 'center',
     marginBottom: spacing.lg,
   },
   emptyText: {
-    fontSize: 16,
+    ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
   },
   retryButton: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.xl,
-    paddingVertical: 10,
-    borderRadius: sizes.radiusSm,
+    paddingVertical: spacing.md,
+    borderRadius: sizes.radiusMd,
   },
   retryButtonText: {
+    ...typography.button,
     color: colors.textOnPrimary,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
