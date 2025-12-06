@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform, SafeAreaView, StatusBar, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, StatusBar, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@src/contexts/AuthContext';
@@ -23,13 +23,12 @@ const RoomDetailScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
   const { room, loading, error, refetch } = useRoom(id || '');
-  const { updateOnlineStatus } = useMember();
 
   // 실제 로그인된 사용자 ID 사용
   const currentUserId = user?.uid;
 
-  // 세션 관리 훅
-  const { sessionMembers, isConnected, joinSession, leaveSession } = useRoomSession(id || '', currentUserId);
+  // 방 멤버 관리 훅
+  const { members, isConnected, joinRoom, leaveRoom } = useRoomSession(id || '', currentUserId);
   const { isLandscape } = useOrientationContext();
   const insets = useSafeAreaInsets();
   const { playerHeight } = usePlayerSize();
@@ -46,35 +45,35 @@ const RoomDetailScreen = () => {
 
   const WIDTH_PLAY_HEAD = scaleWidth(15);
 
-  const { updateMemberRole, removeMember, loading: memberLoading } = useMember();
+  const { updateMemberRole, removeMember } = useMember();
 
   const handleRoleChange = async (member: any) => {
-    if (!isAdmin || member.id === currentUserId) return;
+    if (!isAdmin || member.userId === currentUserId) return;
 
     const newRole = member.role === 'admin' ? 'member' : 'admin';
-    const result = await updateMemberRole(id || '', member.id, newRole);
+    const result = await updateMemberRole(id || '', member.userId, newRole);
 
     if (result) {
-      Alert.alert('성공', `${member.nickname}님의 권한이 변경되었습니다.`);
+      Alert.alert('성공', `${member.displayName}님의 권한이 변경되었습니다.`);
       refetch();
     }
   };
 
   const handleRemoveMember = async (member: any) => {
-    if (!isAdmin || member.id === currentUserId || member.role === 'owner') return;
+    if (!isAdmin || member.userId === currentUserId || member.role === 'owner') return;
 
     Alert.alert(
       '멤버 추방',
-      `${member.nickname}님을 방에서 추방하시겠습니까?`,
+      `${member.displayName}님을 방에서 추방하시겠습니까?`,
       [
         { text: '취소', style: 'cancel' },
         {
           text: '추방',
           style: 'destructive',
           onPress: async () => {
-            const success = await removeMember(id || '', member.id);
+            const success = await removeMember(id || '', member.userId);
             if (success) {
-              Alert.alert('성공', `${member.nickname}님이 방에서 추방되었습니다.`);
+              Alert.alert('성공', `${member.displayName}님이 방에서 추방되었습니다.`);
               refetch();
             }
           },
@@ -85,26 +84,27 @@ const RoomDetailScreen = () => {
 
   useEffect(() => {
     if (room && !isConnected && currentUserId) {
-      const currentMember = room.members.find(m => m.id === currentUserId);
+      // 기존 멤버인지 확인
+      const currentMember = room.members?.[currentUserId];
       if (currentMember) {
         setCurrentUserRole(currentMember.role);
-
-        // 세션에 참여
-        joinSession({
-          nickname: currentMember.nickname || user?.displayName || '익명',
-          avatar: currentMember.avatar || user?.photoURL || undefined,
-          role: currentMember.role
-        }).catch(error => {
-          console.error('세션 참여 실패:', error);
-        });
       }
+
+      // 방에 참여
+      joinRoom({
+        displayName: user?.displayName || '익명',
+        photoURL: user?.photoURL || undefined,
+        role: currentMember?.role || 'member'
+      }).catch((error: Error) => {
+        console.error('방 참여 실패:', error);
+      });
     }
 
-    // 컴포넌트 언마운트 시 세션 정리
+    // 컴포넌트 언마운트 시 정리
     return () => {
       if (isConnected) {
-        leaveSession().catch(error => {
-          console.error('세션 정리 실패:', error);
+        leaveRoom().catch((error: Error) => {
+          console.error('방 정리 실패:', error);
         });
       }
     };
@@ -121,22 +121,11 @@ const RoomDetailScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // 세션에서 먼저 나가기
-              await leaveSession();
-
-              // 방에서 나가기
-              if (currentUserId) {
-                const response = await RoomService.leaveRoom(id || '', currentUserId);
-                if (response.success) {
-                  router.back();
-                } else {
-                  Alert.alert('오류', response.error || '방 나가기에 실패했습니다.');
-                }
-              } else {
-                Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
-              }
+              // 방에서 나가기 (useRoomSession이 Firebase에서 멤버 제거)
+              await leaveRoom();
+              router.back();
             } catch (error) {
-              Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+              Alert.alert('오류', '방 나가기에 실패했습니다.');
             }
           },
         },
@@ -312,7 +301,7 @@ const RoomDetailScreen = () => {
             <Text style={styles.roomDescription}>{room.description}</Text>
           )}
           <Text style={styles.memberCount}>
-            {room?.currentMembers}/{room?.maxMembers} 명
+            {members.length} 명 참여 중
           </Text>
         </View>
       );
@@ -349,9 +338,9 @@ const RoomDetailScreen = () => {
 
       return (
         <FlatList
-          data={room?.members || []}
+          data={members}
           renderItem={renderMemberItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.userId}
           ListHeaderComponent={renderRoomHeader}
           ListFooterComponent={renderRoomFooter}
           showsVerticalScrollIndicator={false}

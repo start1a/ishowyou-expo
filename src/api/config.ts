@@ -5,7 +5,7 @@ export const API_CONFIG = {
   HEADERS: {
     'Content-Type': 'application/json',
   },
-  USE_MOCK: true,
+  USE_MOCK: false,
 };
 
 // API 엔드포인트 상수

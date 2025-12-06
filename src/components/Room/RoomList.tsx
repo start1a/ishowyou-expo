@@ -34,7 +34,7 @@ export const RoomList = ({ onRoomSelect }: RoomListProps) => {
 
       <View style={styles.roomFooter}>
         <Text style={styles.memberCount}>
-          {item.currentMembers}/{item.maxMembers} 명
+          {item.members ? Object.keys(item.members).length : 0} 명
         </Text>
         <Text style={styles.createdDate}>
           {new Date(item.createdAt).toLocaleDateString()}
