@@ -1,14 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Member } from '@src/api/types';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { RoomMember } from '@src/api/types';
 import { colors, spacing, sizes, typography, shadows } from '@src/theme';
 
 interface ItemRoomMemberProps {
-  member: Member;
+  member: RoomMember;
   currentUserId: string;
   isAdmin: boolean;
-  onRoleChange: (member: Member) => void;
-  onRemoveMember: (member: Member) => void;
+  onRoleChange: (member: RoomMember) => void;
+  onRemoveMember: (member: RoomMember) => void;
 }
 
 export const ItemRoomMember = ({
@@ -18,7 +18,7 @@ export const ItemRoomMember = ({
   onRoleChange,
   onRemoveMember,
 }: ItemRoomMemberProps) => {
-  const isCurrentUser = member.id === currentUserId;
+  const isCurrentUser = member.userId === currentUserId;
   const canManage = isAdmin && !isCurrentUser && member.role !== 'owner';
 
   const getRoleStyle = (role: string) => {
@@ -36,12 +36,12 @@ export const ItemRoomMember = ({
     <View style={styles.memberItem}>
       <View style={styles.memberInfo}>
         <View style={styles.avatarContainer}>
-          {member.avatar ? (
-            <Text style={styles.avatar}>{member.avatar}</Text>
+          {member.photoURL ? (
+            <Image source={{ uri: member.photoURL }} style={styles.avatarImage} />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarText}>
-                {member.nickname.charAt(0).toUpperCase()}
+                {member.displayName.charAt(0).toUpperCase()}
               </Text>
             </View>
           )}
@@ -53,7 +53,7 @@ export const ItemRoomMember = ({
 
         <View style={styles.memberDetails}>
           <Text style={styles.memberName}>
-            {member.nickname}
+            {member.displayName}
             {isCurrentUser && ' (나)'}
           </Text>
           <View style={styles.memberMeta}>
@@ -116,13 +116,10 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginRight: spacing.md,
   },
-  avatar: {
+  avatarImage: {
     width: sizes.avatarMd,
     height: sizes.avatarMd,
     borderRadius: sizes.avatarMd / 2,
-    fontSize: 24,
-    textAlign: 'center',
-    lineHeight: sizes.avatarMd,
   },
   avatarPlaceholder: {
     width: sizes.avatarMd,

@@ -2,46 +2,37 @@ export interface Room {
   id: string;
   name: string;
   description?: string;
-  maxMembers: number;
-  currentMembers: number;
+  ownerId: string;
   isPrivate: boolean;
   password?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy: string;
-  members: Member[];
+  createdAt: number;
+  members?: { [userId: string]: Omit<RoomMember, 'userId'> };
+  videoState?: VideoState;
 }
 
-export interface Member {
-  id: string;
-  nickname: string;
-  avatar?: string;
-  isOnline: boolean;
-  joinedAt: Date;
+export interface RoomMember {
+  userId: string;
+  displayName: string;
+  photoURL: string | null;
   role: 'owner' | 'admin' | 'member';
+  isOnline: boolean;
+  joinedAt: number;
+  lastSeen: number;
+}
+
+export interface VideoState {
+  videoId: string;
+  isPlaying: boolean;
+  currentTime: number;
+  updatedAt: number;
+  updatedBy: string;
 }
 
 export interface CreateRoomRequest {
   name: string;
   description?: string;
-  maxMembers: number;
   isPrivate: boolean;
   password?: string;
-}
-
-export interface JoinRoomRequest {
-  roomId: string;
-  memberId: string;
-  password?: string;
-  memberInfo: {
-    nickname: string;
-    avatar?: string;
-  };
-}
-
-export interface UpdateMemberRequest {
-  nickname?: string;
-  avatar?: string;
 }
 
 export interface ApiResponse<T> {
@@ -51,20 +42,12 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-// Session-related types for real-time functionality
-export interface SessionMember {
-  id: string;
-  nickname: string;
-  avatar?: string;
-  isOnline: boolean;
-  lastSeen: number;
-  joinedAt: number;
-  role: 'owner' | 'admin' | 'member';
-}
-
-export interface RoomSession {
-  roomId: string;
-  members: { [memberId: string]: SessionMember };
+// User profile stored in /users/{userId}
+export interface UserProfile {
+  userId: string;
+  displayName: string;
+  email: string;
+  photoURL: string | null;
   createdAt: number;
-  updatedAt: number;
+  lastLoginAt: number;
 }

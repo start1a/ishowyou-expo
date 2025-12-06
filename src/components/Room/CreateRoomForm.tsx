@@ -15,7 +15,6 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
   const [formData, setFormData] = useState<CreateRoomRequest>({
     name: '',
     description: '',
-    maxMembers: 10,
     isPrivate: false,
     password: '',
   });
@@ -91,21 +90,6 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
           multiline
           numberOfLines={3}
           maxLength={200}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>최대 인원</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.maxMembers.toString()}
-          onChangeText={(text) => {
-            const num = parseInt(text) || 1;
-            setFormData(prev => ({ ...prev, maxMembers: Math.min(Math.max(num, 1), 100) }));
-          }}
-          placeholder="최대 인원"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="numeric"
         />
       </View>
 

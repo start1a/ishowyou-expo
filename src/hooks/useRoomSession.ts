@@ -1,92 +1,83 @@
 import { useState, useEffect, useRef } from 'react';
 import { database } from '@src/config/firebase';
-import { ref, onValue, off, set, update, remove, serverTimestamp, onDisconnect } from 'firebase/database';
-import { SessionMember, RoomSession } from '@src/api/types';
+import { ref, onValue, off, set, remove, onDisconnect } from 'firebase/database';
+import { RoomMember } from '@src/api/types';
 
 interface UseRoomSessionReturn {
-  sessionMembers: SessionMember[];
+  members: RoomMember[];
   isConnected: boolean;
-  joinSession: (memberInfo: Omit<SessionMember, 'id' | 'isOnline' | 'lastSeen' | 'joinedAt'>) => Promise<void>;
-  leaveSession: () => Promise<void>;
-  updateMemberStatus: (status: Partial<Pick<SessionMember, 'isOnline' | 'lastSeen'>>) => Promise<void>;
+  joinRoom: (memberInfo: { displayName: string; photoURL?: string; role: 'owner' | 'admin' | 'member' }) => Promise<void>;
+  leaveRoom: () => Promise<void>;
 }
 
 export const useRoomSession = (roomId: string, currentUserId?: string): UseRoomSessionReturn => {
-  const [sessionMembers, setSessionMembers] = useState<SessionMember[]>([]);
+  const [members, setMembers] = useState<RoomMember[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const sessionRef = useRef<any>(null);
+  const membersRef = useRef<any>(null);
   const memberRef = useRef<any>(null);
   const disconnectRef = useRef<any>(null);
 
-  // 세션 데이터 실시간 리스너 설정
+  // 멤버 데이터 실시간 리스너 설정
   useEffect(() => {
     if (!roomId) return;
 
-    const sessionPath = `sessions/${roomId}`;
-    sessionRef.current = ref(database, sessionPath);
+    const membersPath = `rooms/${roomId}/members`;
+    membersRef.current = ref(database, membersPath);
 
-    const unsubscribe = onValue(sessionRef.current, (snapshot) => {
+    const unsubscribe = onValue(membersRef.current, (snapshot) => {
       if (snapshot.exists()) {
-        const sessionData: RoomSession = snapshot.val();
-        const members = Object.entries(sessionData.members || {}).map(([id, member]) => ({
-          ...member as SessionMember,
-          id
+        const membersData = snapshot.val();
+        const membersList = Object.entries(membersData).map(([odI, member]) => ({
+          ...(member as Omit<RoomMember, 'userId'>),
+          userId: odI
         }));
-        setSessionMembers(members);
+        setMembers(membersList);
       } else {
-        setSessionMembers([]);
+        setMembers([]);
       }
     });
 
     return () => {
-      if (sessionRef.current) {
-        off(sessionRef.current, 'value', unsubscribe);
+      if (membersRef.current) {
+        off(membersRef.current, 'value', unsubscribe);
       }
     };
   }, [roomId]);
 
-  // 세션 참여
-  const joinSession = async (memberInfo: Omit<SessionMember, 'id' | 'isOnline' | 'lastSeen' | 'joinedAt'>) => {
+  // 방 참여
+  const joinRoom = async (memberInfo: { displayName: string; photoURL?: string; role: 'owner' | 'admin' | 'member' }) => {
     if (!roomId || !currentUserId) return;
 
     try {
       const now = Date.now();
-      const memberPath = `sessions/${roomId}/members/${currentUserId}`;
+      const memberPath = `rooms/${roomId}/members/${currentUserId}`;
       memberRef.current = ref(database, memberPath);
 
-      const memberData: SessionMember = {
-        ...memberInfo,
-        id: currentUserId,
+      const memberData: Omit<RoomMember, 'userId'> = {
+        displayName: memberInfo.displayName,
+        photoURL: memberInfo.photoURL || null,
+        role: memberInfo.role,
         isOnline: true,
-        lastSeen: now,
-        joinedAt: now
+        joinedAt: now,
+        lastSeen: now
       };
 
       // 멤버 정보 설정
       await set(memberRef.current, memberData);
 
-      // 세션 메타데이터 업데이트
-      const sessionMetaPath = `sessions/${roomId}`;
-      await update(ref(database, sessionMetaPath), {
-        updatedAt: serverTimestamp()
-      });
-
-      // 연결 해제 시 자동으로 오프라인 처리
+      // 연결 해제 시 멤버 완전 삭제 (앱 종료/네트워크 끊김)
       disconnectRef.current = onDisconnect(memberRef.current);
-      await disconnectRef.current.update({
-        isOnline: false,
-        lastSeen: serverTimestamp()
-      });
+      await disconnectRef.current.remove();
 
       setIsConnected(true);
     } catch (error) {
-      console.error('세션 참여 실패:', error);
+      console.error('방 참여 실패:', error);
       throw error;
     }
   };
 
-  // 세션 퇴장
-  const leaveSession = async () => {
+  // 방 퇴장
+  const leaveRoom = async () => {
     if (!roomId || !currentUserId) return;
 
     try {
@@ -100,48 +91,26 @@ export const useRoomSession = (roomId: string, currentUserId?: string): UseRoomS
         await remove(memberRef.current);
       }
 
-      // 세션 메타데이터 업데이트
-      const sessionMetaPath = `sessions/${roomId}`;
-      await update(ref(database, sessionMetaPath), {
-        updatedAt: serverTimestamp()
-      });
-
       setIsConnected(false);
     } catch (error) {
-      console.error('세션 퇴장 실패:', error);
+      console.error('방 퇴장 실패:', error);
       throw error;
     }
   };
 
-  // 멤버 상태 업데이트
-  const updateMemberStatus = async (status: Partial<Pick<SessionMember, 'isOnline' | 'lastSeen'>>) => {
-    if (!roomId || !currentUserId || !memberRef.current) return;
-
-    try {
-      await update(memberRef.current, {
-        ...status,
-        lastSeen: status.lastSeen || serverTimestamp()
-      });
-    } catch (error) {
-      console.error('멤버 상태 업데이트 실패:', error);
-      throw error;
-    }
-  };
-
-  // 컴포넌트 언마운트 시 세션 정리
+  // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
       if (isConnected) {
-        leaveSession();
+        leaveRoom();
       }
     };
   }, [isConnected]);
 
   return {
-    sessionMembers,
+    members,
     isConnected,
-    joinSession,
-    leaveSession,
-    updateMemberStatus
+    joinRoom,
+    leaveRoom
   };
 };

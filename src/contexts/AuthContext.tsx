@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, signInWithCredential, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@src/config/firebase';
+import { ref, get, set, update, serverTimestamp } from 'firebase/database';
+import { auth, database } from '@src/config/firebase';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -38,7 +39,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
   const [isFirstLaunch, setIsFirstLaunch] = useState(true);
 
-  // 세션 저장
+  // 세션 저장 (로컬 + Firebase)
   const saveUserSession = async (user: User) => {
     try {
       const userData = {
@@ -50,6 +51,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       };
       await AsyncStorage.setItem(STORAGE_KEYS.USER_TOKEN, JSON.stringify(userData));
       await AsyncStorage.setItem(STORAGE_KEYS.LAST_LOGIN_TIME, new Date().toISOString());
+
+      // Firebase Realtime Database에 유저 프로필 저장/업데이트
+      const userRef = ref(database, `users/${user.uid}`);
+      const snapshot = await get(userRef);
+
+      if (snapshot.exists()) {
+        // 기존 유저: 로그인 시간만 업데이트
+        await update(userRef, {
+          displayName: user.displayName || '익명',
+          photoURL: user.photoURL || null,
+          lastLoginAt: serverTimestamp(),
+        });
+      } else {
+        // 신규 유저: 전체 프로필 생성
+        await set(userRef, {
+          userId: user.uid,
+          displayName: user.displayName || '익명',
+          email: user.email || '',
+          photoURL: user.photoURL || null,
+          createdAt: serverTimestamp(),
+          lastLoginAt: serverTimestamp(),
+        });
+      }
     } catch (error) {
       console.error('세션 저장 오류:', error);
     }
