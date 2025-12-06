@@ -4,20 +4,10 @@ import { useRouter } from 'expo-router';
 import { RoomList, CreateRoomForm } from '@src/components/Room';
 import { Room } from '@src/api/types';
 import { colors, spacing, sizes, typography } from '@src/theme';
-import { useAuth } from '@src/contexts/AuthContext';
 
 const HomeScreen = () => {
   const router = useRouter();
-  const { logout } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      Alert.alert('오류', '로그아웃에 실패했습니다.');
-    }
-  };
 
   const handleRoomSelect = (room: Room) => {
     router.push(`/room/${room.id}`);
@@ -38,9 +28,6 @@ const HomeScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>로그아웃</Text>
-        </TouchableOpacity>
         <Text style={styles.title}>IShowYou</Text>
         <Text style={styles.subtitle}>함께 보는 즐거움</Text>
         <TouchableOpacity
@@ -119,16 +106,5 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.backgroundCard,
-  },
-  logoutButton: {
-    position: 'absolute',
-    top: spacing.xl,
-    right: spacing.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  logoutButtonText: {
-    ...typography.bodySmall,
-    color: 'rgba(255, 255, 255, 0.8)',
   },
 });

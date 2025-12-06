@@ -84,17 +84,25 @@ const RoomDetailScreen = () => {
 
   useEffect(() => {
     if (room && !isConnected && currentUserId) {
-      // 기존 멤버인지 확인
-      const currentMember = room.members?.[currentUserId];
-      if (currentMember) {
-        setCurrentUserRole(currentMember.role);
+      // 역할 결정: 방장 > 기존 멤버 역할 > 일반 멤버
+      let role: 'owner' | 'admin' | 'member' = 'member';
+
+      if (room.ownerId === currentUserId) {
+        role = 'owner';
+      } else {
+        const currentMember = room.members?.[currentUserId];
+        if (currentMember) {
+          role = currentMember.role;
+        }
       }
+
+      setCurrentUserRole(role);
 
       // 방에 참여
       joinRoom({
         displayName: user?.displayName || '익명',
         photoURL: user?.photoURL || undefined,
-        role: currentMember?.role || 'member'
+        role
       }).catch((error: Error) => {
         console.error('방 참여 실패:', error);
       });
