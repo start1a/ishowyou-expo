@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, StatusBar, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,6 +6,7 @@ import { useAuth } from '@src/contexts/AuthContext';
 import { useRoom } from '@src/hooks/useRoomApi';
 import { useMember } from '@src/hooks/useMemberApi';
 import { useRoomSession } from '@src/hooks/useRoomSession';
+import { useVideoSync } from '@src/hooks/useVideoSync';
 import { ItemRoomMember } from '@src/components/Member';
 import { VideoPlayerComponent } from '@src/components/VideoPlayer';
 import { VideoList } from '@src/components/VideoList/VideoList';
@@ -39,6 +40,37 @@ const RoomDetailScreen = () => {
   const [selectedVideo, setSelectedVideo] = useState(VIDEO_LIST[0]);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isPlaying] = useState(false); // VideoPlayerComponent 내부에서 관리됨
+
+  // 방장 여부 확인
+  const isOwner = currentUserRole === 'owner';
+
+  // 동기화 훅
+  const {
+    isSyncControlEnabled,
+    toggleSyncControl,
+    isSyncFollowEnabled,
+    toggleSyncFollow,
+    syncState,
+  } = useVideoSync({
+    roomId: id || '',
+    isOwner,
+    currentTime,
+    isPlaying,
+    videoId: selectedVideo.videoId,
+  });
+
+  // 동기화 토글 핸들러 (방장/멤버에 따라 다른 함수 호출)
+  const handleSyncToggle = useCallback(() => {
+    if (isOwner) {
+      toggleSyncControl();
+    } else {
+      toggleSyncFollow();
+    }
+  }, [isOwner, toggleSyncControl, toggleSyncFollow]);
+
+  // 현재 동기화 활성화 상태
+  const isSyncEnabled = isOwner ? isSyncControlEnabled : isSyncFollowEnabled;
 
   // 탭 상태 (비디오 목록 또는 방 정보)
   const [activeTab, setActiveTab] = useState<'videos' | 'room'>('videos');
@@ -214,6 +246,11 @@ const RoomDetailScreen = () => {
               setCurrentTime(current);
               setDuration(total);
             }}
+            isSyncEnabled={isSyncEnabled}
+            isOwner={isOwner}
+            onSyncToggle={handleSyncToggle}
+            syncTime={syncState?.currentTime}
+            syncIsPlaying={syncState?.isPlaying}
           />
 
           <View style={{
@@ -247,6 +284,11 @@ const RoomDetailScreen = () => {
             setCurrentTime(current);
             setDuration(total);
           }}
+          isSyncEnabled={isSyncEnabled}
+          isOwner={isOwner}
+          onSyncToggle={handleSyncToggle}
+          syncTime={syncState?.currentTime}
+          syncIsPlaying={syncState?.isPlaying}
         />
 
         {/* 탭 헤더 */}

@@ -9,11 +9,23 @@ import { usePlayerSize } from '@src/hooks/usePlayerSize';
 interface VideoPlayerComponentProps {
   videoId: string;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
+  // 동기화 관련 props
+  isSyncEnabled?: boolean;
+  isOwner?: boolean;
+  onSyncToggle?: () => void;
+  syncTime?: number;
+  syncIsPlaying?: boolean;
+  onSyncSeek?: (time: number) => void;
 }
 
 export const VideoPlayerComponent = ({
   videoId,
   onTimeUpdate,
+  isSyncEnabled,
+  isOwner,
+  onSyncToggle,
+  syncTime,
+  syncIsPlaying,
 }: VideoPlayerComponentProps) => {
   const playerRef = useRef<YoutubeIframeRef>(null);
   const isLandscape = useOrientation();
@@ -97,6 +109,26 @@ export const VideoPlayerComponent = ({
     playerRef.current?.seekTo(time, true);
   }, []);
 
+  // 멤버: 동기화 시간 변경 시 시간 이동
+  useEffect(() => {
+    if (syncTime !== undefined && !isOwner && isSyncEnabled) {
+      const timeDiff = Math.abs(syncTime - currentTime);
+      if (timeDiff > 2) {
+        setCurrentTime(syncTime);
+        playerRef.current?.seekTo(syncTime, true);
+      }
+    }
+  }, [syncTime, isOwner, isSyncEnabled]);
+
+  // 멤버: 동기화 재생 상태 변경 시 재생/일시정지
+  useEffect(() => {
+    if (syncIsPlaying !== undefined && !isOwner && isSyncEnabled) {
+      if (syncIsPlaying !== isPlaying) {
+        setIsPlaying(syncIsPlaying);
+      }
+    }
+  }, [syncIsPlaying, isOwner, isSyncEnabled]);
+
   // 비디오 시간 정보 업데이트
   useEffect(() => {
     const getVideoDetails = async () => {
@@ -178,6 +210,9 @@ export const VideoPlayerComponent = ({
         onDragStart={handleDragStart}
         onDragUpdate={handleDragUpdate}
         onDragEnd={handleDragEnd}
+        isSyncEnabled={isSyncEnabled}
+        isOwner={isOwner}
+        onSyncToggle={onSyncToggle}
       />
     </View>
   );
