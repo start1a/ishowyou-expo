@@ -11,7 +11,6 @@ import { VideoPlayerComponent } from '@src/components/VideoPlayer';
 import { VideoList } from '@src/components/VideoList/VideoList';
 import { PortraitProgressBar } from '@src/components/ProgressBar';
 import { RoomService } from '@src/api';
-import { useOrientation } from '@src/hooks/useOrientation';
 import { useOrientationContext } from '@src/contexts/OrientationContext';
 import { usePlayerSize } from '@src/hooks/usePlayerSize';
 import { scaleWidth } from '@src/DeviceScale';
@@ -209,7 +208,7 @@ const RoomDetailScreen = () => {
         <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
         <View style={{ width: insets.left, position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: colors.backgroundDark }} />
 
-        <SafeAreaView style={{
+        <View style={{
           flex: 1,
           flexDirection: 'row',
           justifyContent: 'center',
@@ -225,13 +224,13 @@ const RoomDetailScreen = () => {
           <View style={{
             flex: 1,
             backgroundColor: colors.backgroundCard,
-            width: '35%',
-            paddingEnd: insets.bottom,
+            paddingEnd: insets.right,
             paddingBottom: insets.bottom,
+            paddingTop: insets.top,
           }}>
             {renderTabContent()}
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     );
   }

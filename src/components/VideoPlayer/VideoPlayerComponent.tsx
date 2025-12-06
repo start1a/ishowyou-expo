@@ -143,8 +143,8 @@ export const VideoPlayerComponent = ({
     <View style={[
       isLandscape && {
         justifyContent: 'center',
-        flex: 65,
-        maxWidth: '65%'
+        flex: 60,
+        maxWidth: '60%'
       },
       { backgroundColor: 'black' }
     ]}>
