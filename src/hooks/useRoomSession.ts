@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { database } from '@src/config/firebase';
-import { ref, onValue, off, set, update, remove, serverTimestamp, onDisconnect } from 'firebase/database';
+import { ref, onValue, off, set, remove, onDisconnect } from 'firebase/database';
 import { RoomMember } from '@src/api/types';
 
 interface UseRoomSessionReturn {
@@ -8,7 +8,6 @@ interface UseRoomSessionReturn {
   isConnected: boolean;
   joinRoom: (memberInfo: { displayName: string; photoURL?: string; role: 'owner' | 'admin' | 'member' }) => Promise<void>;
   leaveRoom: () => Promise<void>;
-  updateMemberStatus: (status: Partial<Pick<RoomMember, 'isOnline'>>) => Promise<void>;
 }
 
 export const useRoomSession = (roomId: string, currentUserId?: string): UseRoomSessionReturn => {
@@ -66,12 +65,9 @@ export const useRoomSession = (roomId: string, currentUserId?: string): UseRoomS
       // 멤버 정보 설정
       await set(memberRef.current, memberData);
 
-      // 연결 해제 시 자동으로 오프라인 처리
+      // 연결 해제 시 멤버 완전 삭제 (앱 종료/네트워크 끊김)
       disconnectRef.current = onDisconnect(memberRef.current);
-      await disconnectRef.current.update({
-        isOnline: false,
-        lastSeen: serverTimestamp()
-      });
+      await disconnectRef.current.remove();
 
       setIsConnected(true);
     } catch (error) {
@@ -102,21 +98,6 @@ export const useRoomSession = (roomId: string, currentUserId?: string): UseRoomS
     }
   };
 
-  // 멤버 상태 업데이트
-  const updateMemberStatus = async (status: Partial<Pick<RoomMember, 'isOnline'>>) => {
-    if (!roomId || !currentUserId || !memberRef.current) return;
-
-    try {
-      await update(memberRef.current, {
-        ...status,
-        lastSeen: serverTimestamp()
-      });
-    } catch (error) {
-      console.error('멤버 상태 업데이트 실패:', error);
-      throw error;
-    }
-  };
-
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
@@ -130,7 +111,6 @@ export const useRoomSession = (roomId: string, currentUserId?: string): UseRoomS
     members,
     isConnected,
     joinRoom,
-    leaveRoom,
-    updateMemberStatus
+    leaveRoom
   };
 };
