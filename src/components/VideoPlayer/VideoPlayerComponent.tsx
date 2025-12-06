@@ -18,7 +18,7 @@ export const VideoPlayerComponent = ({
   const playerRef = useRef<YoutubeIframeRef>(null);
   const isLandscape = useOrientation();
   const { playerHeight } = usePlayerSize();
-  
+
   // 비디오 상태
   const [isPlaying, setIsPlaying] = useState(false);
   const [isEnded, setIsEnded] = useState(false);
@@ -32,13 +32,18 @@ export const VideoPlayerComponent = ({
   const [isControllerVisible, setIsControllerVisible] = useState(true);
 
   // 상수
-  const WIDTH_SMALL_ICON = scaleHeight(20);
   const WIDTH_PLAY_HEAD = scaleWidth(15);
 
   // 이벤트 핸들러
   const onStateChange = useCallback((state: PLAYER_STATES) => {
     console.log('Player state:', state);
     setPlayingState(state);
+
+    // 상태가 변했다는 것은 로딩/재생 등이 시작되었다는 의미이므로 seeking 상태 해제
+    if (state === PLAYER_STATES.PLAYING || state === PLAYER_STATES.PAUSED) {
+      setIsSeeking(false);
+    }
+
     if (state === PLAYER_STATES.ENDED) {
       setIsEnded(true);
       setIsPlaying(false);
@@ -55,16 +60,24 @@ export const VideoPlayerComponent = ({
     }
   }, [isEnded]);
 
-  const seekTo = async (seconds: number) => {
-    const currentTime = await playerRef.current?.getCurrentTime();
-    if (!currentTime) return;
-    if (currentTime >= duration - 1) return;
+  const seekTo = (seconds: number) => {
+    // 1. 현재 State의 시간 기반으로 계산 (비동기 제거)
+    // 2. Optimistic Update: UI 먼저 갱신
+    if (currentTime >= duration - 1 && seconds > 0) return;
 
-    const newTime = currentTime + seconds;
-    playerRef.current?.seekTo(
-      newTime > duration ? Math.trunc(duration - 1) : newTime, 
-      true
-    );
+    const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
+
+    // UI 즉시 업데이트 및 Seeking 상태 설정
+    setCurrentTime(newTime);
+    setIsSeeking(true);
+
+    // 실제 플레이어 이동
+    playerRef.current?.seekTo(newTime, true);
+
+    // 안전장치: 1초 후에도 상태 변화가 없으면 seeking 해제
+    setTimeout(() => {
+      setIsSeeking(false);
+    }, 1000);
   };
 
   const handleSeekBackward = () => seekTo(-10);
@@ -136,7 +149,7 @@ export const VideoPlayerComponent = ({
         videoId={videoId}
         onChangeState={onStateChange}
       />
-      
+
       <VideoPlayerOverlay
         isControllerVisible={isControllerVisible}
         isLandscape={isLandscape}
@@ -144,7 +157,6 @@ export const VideoPlayerComponent = ({
         currentTime={currentTime}
         duration={duration}
         playHeadWidth={WIDTH_PLAY_HEAD}
-        smallIconWidth={WIDTH_SMALL_ICON}
         onToggleController={() => setIsControllerVisible(prev => !prev)}
         onPlayToggle={handlePlayToggle}
         onSeekBackward={handleSeekBackward}

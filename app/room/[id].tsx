@@ -18,32 +18,32 @@ import { scaleWidth } from '@src/DeviceScale';
 import { VIDEO_LIST } from '@src/constants/videoData';
 
 const RoomDetailScreen = () => {
-  
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const { room, loading, error, refetch } = useRoom(id || '');
   const { updateOnlineStatus } = useMember();
-  
+
   // 실제 로그인된 사용자 ID 사용
   const currentUserId = user?.uid;
-  
+
   // 세션 관리 훅
   const { sessionMembers, isConnected, joinSession, leaveSession } = useRoomSession(id || '', currentUserId);
   const { isLandscape } = useOrientationContext();
   const insets = useSafeAreaInsets();
   const { playerHeight } = usePlayerSize();
-    
+
   const [currentUserRole, setCurrentUserRole] = useState<'owner' | 'admin' | 'member'>('member');
-  
+
   // 비디오 플레이어 상태
   const [selectedVideo, setSelectedVideo] = useState(VIDEO_LIST[0]);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  
+
   // 탭 상태 (비디오 목록 또는 방 정보)
   const [activeTab, setActiveTab] = useState<'videos' | 'room'>('videos');
-  
+
   const WIDTH_PLAY_HEAD = scaleWidth(15);
 
   const { updateMemberRole, removeMember, loading: memberLoading } = useMember();
@@ -53,7 +53,7 @@ const RoomDetailScreen = () => {
 
     const newRole = member.role === 'admin' ? 'member' : 'admin';
     const result = await updateMemberRole(id || '', member.id, newRole);
-    
+
     if (result) {
       Alert.alert('성공', `${member.nickname}님의 권한이 변경되었습니다.`);
       refetch();
@@ -88,11 +88,11 @@ const RoomDetailScreen = () => {
       const currentMember = room.members.find(m => m.id === currentUserId);
       if (currentMember) {
         setCurrentUserRole(currentMember.role);
-        
+
         // 세션에 참여
         joinSession({
           nickname: currentMember.nickname || user?.displayName || '익명',
-          avatar: currentMember.avatar || user?.photoURL,
+          avatar: currentMember.avatar || user?.photoURL || undefined,
           role: currentMember.role
         }).catch(error => {
           console.error('세션 참여 실패:', error);
@@ -123,7 +123,7 @@ const RoomDetailScreen = () => {
             try {
               // 세션에서 먼저 나가기
               await leaveSession();
-              
+
               // 방에서 나가기
               if (currentUserId) {
                 const response = await RoomService.leaveRoom(id || '', currentUserId);
@@ -207,7 +207,7 @@ const RoomDetailScreen = () => {
       <View style={{ flex: 1 }}>
         <StatusBar backgroundColor="#000000" barStyle="light-content" />
         <View style={{ width: insets.left, position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: 'black' }} />
-        
+
         <SafeAreaView style={{
           flex: 1,
           flexDirection: 'row',
@@ -240,7 +240,7 @@ const RoomDetailScreen = () => {
     <View style={{ flex: 1 }}>
       <StatusBar backgroundColor="#000000" barStyle="light-content" />
       <View style={{ height: insets.top, backgroundColor: 'black' }} />
-      
+
       <SafeAreaView style={{
         flex: 1,
         flexDirection: 'column',
@@ -320,7 +320,7 @@ const RoomDetailScreen = () => {
       const renderMemberItem = ({ item }: { item: any }) => (
         <ItemRoomMember
           member={item}
-          currentUserId={currentUserId}
+          currentUserId={currentUserId || ''}
           isAdmin={isAdmin}
           onRoleChange={handleRoleChange}
           onRemoveMember={handleRemoveMember}
@@ -335,7 +335,7 @@ const RoomDetailScreen = () => {
           >
             <Text style={styles.leaveButtonText}>나가기</Text>
           </TouchableOpacity>
-          
+
           {currentUserRole === 'owner' && (
             <TouchableOpacity
               style={styles.deleteButton}
