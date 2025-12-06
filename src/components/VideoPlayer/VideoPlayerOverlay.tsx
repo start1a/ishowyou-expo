@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   containerVisible: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'transparent',
   },
   bottomControlsContainer: {
     position: 'absolute',

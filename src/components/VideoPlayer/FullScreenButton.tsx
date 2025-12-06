@@ -3,6 +3,7 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
 import { IconFullScreen } from '@src/assets/icons';
+import { VIDEO_PLAYER_THEME } from '@src/theme/VideoPlayerTheme';
 
 
 export const FullScreenButton = () => {
@@ -40,6 +41,7 @@ const styles = StyleSheet.create({
     minHeight: scaleHeight(40),
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8, borderWidth: 1, borderColor: 'white'
+    borderRadius: VIDEO_PLAYER_THEME.sizes.buttonRadius,
+    backgroundColor: VIDEO_PLAYER_THEME.colors.overlayBackground
   }
 });

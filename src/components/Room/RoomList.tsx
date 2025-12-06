@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRooms } from '@src/hooks/useRoomApi';
 import { Room } from '@src/api/types';
+import { colors, spacing, sizes } from '@src/theme';
 
 interface RoomListProps {
   onRoomSelect?: (room: Room) => void;
@@ -11,7 +12,7 @@ export const RoomList = ({ onRoomSelect }: RoomListProps) => {
   const { rooms, loading, error, refetch } = useRooms();
 
   const renderRoom = ({ item }: { item: Room }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.roomItem}
       onPress={() => onRoomSelect?.(item)}
     >
@@ -23,11 +24,11 @@ export const RoomList = ({ onRoomSelect }: RoomListProps) => {
           </View>
         )}
       </View>
-      
+
       {item.description && (
         <Text style={styles.roomDescription}>{item.description}</Text>
       )}
-      
+
       <View style={styles.roomFooter}>
         <Text style={styles.memberCount}>
           {item.currentMembers}/{item.maxMembers} 명
@@ -84,15 +85,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    padding: 16,
+    padding: spacing.lg,
   },
   roomItem: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.backgroundLight,
+    borderRadius: sizes.radiusMd,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.backgroundDark,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -101,27 +102,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   roomName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
     flex: 1,
   },
   privateIndicator: {
-    backgroundColor: '#FFF3CD',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: sizes.radiusMd,
   },
   privateText: {
     fontSize: 12,
   },
   roomDescription: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
     lineHeight: 20,
   },
   roomFooter: {
@@ -132,37 +133,37 @@ const styles = StyleSheet.create({
   memberCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#007AFF',
+    color: colors.primary,
   },
   createdDate: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textMuted,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.xl,
   },
   errorText: {
     fontSize: 16,
-    color: '#FF3B30',
+    color: colors.error,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: sizes.radiusSm,
   },
   retryButtonText: {
-    color: 'white',
+    color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
