@@ -9,30 +9,44 @@ import { usePlayerSize } from '@src/hooks/usePlayerSize';
 interface VideoPlayerComponentProps {
   videoId: string;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
+  // 재생 상태 제어 (상위 컴포넌트에서 관리)
+  isPlaying?: boolean;
+  onPlayStateChange?: (isPlaying: boolean) => void;
   // 동기화 관련 props
   isSyncEnabled?: boolean;
   isOwner?: boolean;
   onSyncToggle?: () => void;
   syncTime?: number;
   syncIsPlaying?: boolean;
-  onSyncSeek?: (time: number) => void;
+  // 방장용: 즉시 동기화 업데이트
+  onSyncUpdate?: (time: number, isPlaying: boolean) => void;
 }
 
 export const VideoPlayerComponent = ({
   videoId,
   onTimeUpdate,
+  isPlaying: externalIsPlaying,
+  onPlayStateChange,
   isSyncEnabled,
   isOwner,
   onSyncToggle,
   syncTime,
   syncIsPlaying,
+  onSyncUpdate,
 }: VideoPlayerComponentProps) => {
   const playerRef = useRef<YoutubeIframeRef>(null);
   const isLandscape = useOrientation();
   const { playerHeight } = usePlayerSize();
 
-  // 비디오 상태
-  const [isPlaying, setIsPlaying] = useState(false);
+  // 비디오 상태 (외부 제어 또는 내부 상태)
+  const [internalIsPlaying, setInternalIsPlaying] = useState(false);
+  const isPlaying = externalIsPlaying !== undefined ? externalIsPlaying : internalIsPlaying;
+
+  const setIsPlaying = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    const newValue = typeof value === 'function' ? value(isPlaying) : value;
+    setInternalIsPlaying(newValue);
+    onPlayStateChange?.(newValue);
+  }, [isPlaying, onPlayStateChange]);
   const [isEnded, setIsEnded] = useState(false);
   const [playingState, setPlayingState] = useState<PLAYER_STATES>(PLAYER_STATES.UNSTARTED);
   const [currentTime, setCurrentTime] = useState(0);
@@ -63,16 +77,27 @@ export const VideoPlayerComponent = ({
   }, []);
 
   const handlePlayToggle = useCallback(() => {
+    let newPlaying: boolean;
+    let newTime = currentTime;
+
     if (isEnded) {
       playerRef.current?.seekTo(0, true);
       setIsPlaying(true);
       setIsEnded(false);
+      newPlaying = true;
+      newTime = 0;
     } else {
-      setIsPlaying(prev => !prev);
+      newPlaying = !isPlaying;
+      setIsPlaying(newPlaying);
     }
-  }, [isEnded]);
 
-  const seekTo = (seconds: number) => {
+    // 방장: 즉시 동기화 업데이트
+    if (isOwner && isSyncEnabled) {
+      onSyncUpdate?.(newTime, newPlaying);
+    }
+  }, [isEnded, isPlaying, currentTime, isOwner, isSyncEnabled, onSyncUpdate]);
+
+  const seekTo = useCallback((seconds: number) => {
     // 1. 현재 State의 시간 기반으로 계산 (비동기 제거)
     // 2. Optimistic Update: UI 먼저 갱신
     if (currentTime >= duration - 1 && seconds > 0) return;
@@ -86,11 +111,16 @@ export const VideoPlayerComponent = ({
     // 실제 플레이어 이동
     playerRef.current?.seekTo(newTime, true);
 
+    // 방장: 즉시 동기화 업데이트
+    if (isOwner && isSyncEnabled) {
+      onSyncUpdate?.(newTime, isPlaying);
+    }
+
     // 안전장치: 1초 후에도 상태 변화가 없으면 seeking 해제
     setTimeout(() => {
       setIsSeeking(false);
     }, 1000);
-  };
+  }, [currentTime, duration, isOwner, isSyncEnabled, isPlaying, onSyncUpdate]);
 
   const handleSeekBackward = () => seekTo(-10);
   const handleSeekForward = () => seekTo(10);
@@ -107,7 +137,12 @@ export const VideoPlayerComponent = ({
   const handleDragEnd = useCallback((time: number) => {
     setIsSeeking(false);
     playerRef.current?.seekTo(time, true);
-  }, []);
+
+    // 방장: 즉시 동기화 업데이트
+    if (isOwner && isSyncEnabled) {
+      onSyncUpdate?.(time, isPlaying);
+    }
+  }, [isOwner, isSyncEnabled, isPlaying, onSyncUpdate]);
 
   // 멤버: 동기화 시간 변경 시 시간 이동
   useEffect(() => {

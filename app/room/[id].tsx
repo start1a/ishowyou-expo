@@ -40,7 +40,7 @@ const RoomDetailScreen = () => {
   const [selectedVideo, setSelectedVideo] = useState(VIDEO_LIST[0]);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isPlaying] = useState(false); // VideoPlayerComponent 내부에서 관리됨
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // 방장 여부 확인
   const isOwner = currentUserRole === 'owner';
@@ -52,6 +52,7 @@ const RoomDetailScreen = () => {
     isSyncFollowEnabled,
     toggleSyncFollow,
     syncState,
+    updateSyncImmediately,
   } = useVideoSync({
     roomId: id || '',
     isOwner,
@@ -246,11 +247,14 @@ const RoomDetailScreen = () => {
               setCurrentTime(current);
               setDuration(total);
             }}
+            isPlaying={isPlaying}
+            onPlayStateChange={setIsPlaying}
             isSyncEnabled={isSyncEnabled}
             isOwner={isOwner}
             onSyncToggle={handleSyncToggle}
             syncTime={syncState?.currentTime}
             syncIsPlaying={syncState?.isPlaying}
+            onSyncUpdate={updateSyncImmediately}
           />
 
           <View style={{
@@ -284,11 +288,14 @@ const RoomDetailScreen = () => {
             setCurrentTime(current);
             setDuration(total);
           }}
+          isPlaying={isPlaying}
+          onPlayStateChange={setIsPlaying}
           isSyncEnabled={isSyncEnabled}
           isOwner={isOwner}
           onSyncToggle={handleSyncToggle}
           syncTime={syncState?.currentTime}
           syncIsPlaying={syncState?.isPlaying}
+          onSyncUpdate={updateSyncImmediately}
         />
 
         {/* 탭 헤더 */}
