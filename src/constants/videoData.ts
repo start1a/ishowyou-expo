@@ -36,28 +36,6 @@ export const VIDEO_LIST: VideoData[] = [
   },
   {
     id: "4",
-    title: "Bridgerton | Season 3 Official Trailer | Netflix",
-    videoId: "gpv7ayiPUks",
-    thumbnail: "https://img.youtube.com/vi/gpv7ayiPUks/maxresdefault.jpg",
-    duration: 187,
-    channelName: "Netflix",
-    description: "브리저튼 시즌3 공식 트레일러",
-    viewCount: 15000000,
-    uploadDate: "2024-04-09"
-  },
-  {
-    id: "5",
-    title: "The Night Agent | Official Trailer | Netflix",
-    videoId: "BOeTJNLsGcQ",
-    thumbnail: "https://img.youtube.com/vi/BOeTJNLsGcQ/maxresdefault.jpg",
-    duration: 143,
-    channelName: "Netflix",
-    description: "더 나이트 에이전트 공식 트레일러",
-    viewCount: 18000000,
-    uploadDate: "2023-02-23"
-  },
-  {
-    id: "6",
     title: "All Quiet on the Western Front | Official Trailer | Netflix",
     videoId: "hf8EYbVxtCY",
     thumbnail: "https://img.youtube.com/vi/hf8EYbVxtCY/maxresdefault.jpg",
