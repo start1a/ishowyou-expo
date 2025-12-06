@@ -83,6 +83,20 @@ export const VideoPlayerComponent = ({
   const handleSeekBackward = () => seekTo(-10);
   const handleSeekForward = () => seekTo(10);
 
+  // 드래그 제스처 핸들러
+  const handleDragStart = useCallback(() => {
+    setIsSeeking(true);
+  }, []);
+
+  const handleDragUpdate = useCallback((time: number) => {
+    setCurrentTime(time);
+  }, []);
+
+  const handleDragEnd = useCallback((time: number) => {
+    setIsSeeking(false);
+    playerRef.current?.seekTo(time, true);
+  }, []);
+
   // 비디오 시간 정보 업데이트
   useEffect(() => {
     const getVideoDetails = async () => {
@@ -161,6 +175,9 @@ export const VideoPlayerComponent = ({
         onPlayToggle={handlePlayToggle}
         onSeekBackward={handleSeekBackward}
         onSeekForward={handleSeekForward}
+        onDragStart={handleDragStart}
+        onDragUpdate={handleDragUpdate}
+        onDragEnd={handleDragEnd}
       />
     </View>
   );

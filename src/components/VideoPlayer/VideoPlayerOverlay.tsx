@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { StyleSheet, View, PanResponder, Dimensions } from 'react-native';
 import { PLAYER_STATES } from 'react-native-youtube-iframe';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
 import { LandscapeProgressBar } from '@src/components/ProgressBar';
@@ -18,6 +18,9 @@ interface VideoPlayerOverlayProps {
   onPlayToggle: () => void;
   onSeekBackward: () => void;
   onSeekForward: () => void;
+  onDragStart: () => void;
+  onDragUpdate: (time: number) => void;
+  onDragEnd: (time: number) => void;
 }
 
 export const VideoPlayerOverlay = ({
@@ -31,15 +34,92 @@ export const VideoPlayerOverlay = ({
   onPlayToggle,
   onSeekBackward,
   onSeekForward,
+  onDragStart,
+  onDragUpdate,
+  onDragEnd,
 }: VideoPlayerOverlayProps) => {
+  const isDragging = useRef(false);
+  const startDragTime = useRef(0);
+  const latestDragTime = useRef(0);
+
+  // Stale Closure 방지를 위한 Refs
+  const currentTimeRef = useRef(currentTime);
+  const durationRef = useRef(duration);
+
+  // Callback Refs
+  const onDragStartRef = useRef(onDragStart);
+  const onDragUpdateRef = useRef(onDragUpdate);
+  const onDragEndRef = useRef(onDragEnd);
+
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
+
+  // Sync Callback Refs
+  useEffect(() => {
+    onDragStartRef.current = onDragStart;
+    onDragUpdateRef.current = onDragUpdate;
+    onDragEndRef.current = onDragEnd;
+  }, [onDragStart, onDragUpdate, onDragEnd]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const { dx, dy } = gestureState;
+        return Math.abs(dx) > 10 || Math.abs(dy) > 10;
+      },
+      onPanResponderGrant: () => {
+        isDragging.current = false;
+        // 터치 시작 시점의 최신 currentTime 사용
+        startDragTime.current = currentTimeRef.current;
+        latestDragTime.current = currentTimeRef.current;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const { dx } = gestureState;
+        const currentDuration = durationRef.current;
+        const currentScreenWidth = Dimensions.get('window').width;
+
+        // 드래그 거리 10 이상일 때 드래그 시작으로 간주
+        if (!isDragging.current && Math.abs(dx) > 10) {
+          isDragging.current = true;
+          onDragStartRef.current();
+        }
+
+        if (isDragging.current) {
+          // 화면 너비 = 비디오 전체 길이로 매핑
+          const deltaSeconds = (dx / currentScreenWidth) * currentDuration;
+          const newTime = Math.max(0, Math.min(currentDuration, startDragTime.current + deltaSeconds));
+
+          latestDragTime.current = newTime;
+          onDragUpdateRef.current(newTime);
+        }
+      },
+      onPanResponderRelease: () => {
+        if (isDragging.current) {
+          isDragging.current = false;
+          onDragEndRef.current(latestDragTime.current);
+        } else {
+          // 드래그가 아니면 탭 제스처 처리
+          onToggleController();
+        }
+      },
+    })
+  ).current;
+
   return (
-    <TouchableOpacity
+    <View
       style={[
         styles.container,
         isControllerVisible && styles.containerVisible
       ]}
-      activeOpacity={1}
-      onPress={onToggleController}>
+      hitSlop={{ top: 20, bottom: 20 }}
+      {...panResponder.panHandlers}
+    >
       {isControllerVisible && (
         <>
           <View style={{ flex: 1 }}>
@@ -73,7 +153,7 @@ export const VideoPlayerOverlay = ({
           </View>
         </>
       )}
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -82,9 +162,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
+    backgroundColor: 'transparent',
   },
   containerVisible: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'transparent', // 투명 배경 유지
+    // TouchableOpacity 때는 필요 없었지만 View는 기본적으로 터치를 막지 않음.
+    // 하지만 PanResponder가 이벤트를 가로채므로 상관없음.
+    // 기존에 투명이었던 이유는 뒤의 비디오를 가리지 않기 위함.
+    // 여기서도 backgroundColor는 transparent여야 함.
+    // 하지만 controls나 overlay가 있으면 반투명 배경이 있을 수 있음.
+    // 기존 코드에서는 'transparent' 였음.
   },
   bottomControlsContainer: {
     position: 'absolute',
