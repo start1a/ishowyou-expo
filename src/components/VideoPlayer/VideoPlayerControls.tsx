@@ -19,6 +19,7 @@ interface VideoPlayerControlsProps {
   onSeekForward: () => void;
 }
 
+
 export const VideoPlayerControls = ({
   playingState,
   isLandscape,
@@ -26,43 +27,20 @@ export const VideoPlayerControls = ({
   onSeekBackward,
   onSeekForward,
 }: VideoPlayerControlsProps) => {
-  const WIDTH_ICON_PLAY = isLandscape ? '70%' : '50%';
 
   const renderPlayingIcon = () => {
     switch (playingState) {
       case PLAYER_STATES.PLAYING:
-        return (
-          <IconPause
-            width={WIDTH_ICON_PLAY}
-            height={WIDTH_ICON_PLAY}
-          />
-        );
+        return <IconPause />
       case PLAYER_STATES.UNSTARTED:
       case PLAYER_STATES.PAUSED:
-        return (
-          <IconPlay
-            width={WIDTH_ICON_PLAY}
-            height={WIDTH_ICON_PLAY}
-          />
-        );
+        return <IconPlay />
       case PLAYER_STATES.ENDED:
-        return (
-          <IconRestart
-            width={WIDTH_ICON_PLAY}
-            height={WIDTH_ICON_PLAY}
-          />
-        );
+        return <IconRestart />
       case PLAYER_STATES.BUFFERING:
-        return (
-          <ActivityIndicator size="large" color="white" />
-        );
+        return <ActivityIndicator size="large" color="white" />
       default:
-        return (
-          <IconPlay
-            width={WIDTH_ICON_PLAY}
-            height={WIDTH_ICON_PLAY}
-          />
-        );
+        return <IconPlay />
     }
   };
 
@@ -83,10 +61,7 @@ export const VideoPlayerControls = ({
           backgroundColor: VIDEO_PLAYER_THEME.colors.overlayBackground
         }}
         onPress={onSeekBackward}>
-        <IconRewind
-          width={WIDTH_ICON_PLAY}
-          height={WIDTH_ICON_PLAY}
-        />
+        <IconRewind />
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -112,10 +87,7 @@ export const VideoPlayerControls = ({
           backgroundColor: VIDEO_PLAYER_THEME.colors.overlayBackground
         }}
         onPress={onSeekForward}>
-        <IconFastForward
-          width={WIDTH_ICON_PLAY}
-          height={WIDTH_ICON_PLAY}
-        />
+        <IconFastForward />
       </TouchableOpacity>
     </View>
   );
