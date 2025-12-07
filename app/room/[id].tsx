@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, Keyboard, TouchableWithoutFeedback, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, Keyboard, TouchableWithoutFeedback, StatusBar, Platform } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Drawer } from 'react-native-drawer-layout';
@@ -403,21 +404,27 @@ const RoomDetailScreen = () => {
           />
 
           {/* 채팅 영역 */}
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.chatContainer}>
+          <KeyboardAwareScrollView
+            style={styles.chatContainer}
+            contentContainerStyle={styles.chatContentContainer}
+            keyboardShouldPersistTaps="handled"
+            enableOnAndroid={false}
+            extraScrollHeight={Platform.OS === 'ios' ? 20 : 0}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
               <View style={styles.chatMessages}>
                 <Text style={styles.chatPlaceholderText}>채팅 기능 준비 중...</Text>
               </View>
+            </TouchableWithoutFeedback>
 
-              <ChatInput
-                onSend={(message) => {
-                  console.log('Send message:', message);
-                  // TODO: 채팅 메시지 전송 구현
-                }}
-                onVideoListPress={() => setIsVideoListVisible(true)}
-              />
-            </View>
-          </TouchableWithoutFeedback>
+            <ChatInput
+              onSend={(message) => {
+                console.log('Send message:', message);
+                // TODO: 채팅 메시지 전송 구현
+              }}
+              onVideoListPress={() => setIsVideoListVisible(true)}
+            />
+          </KeyboardAwareScrollView>
 
           {/* 영상 목록 바텀시트 */}
           <VideoListBottomSheet
@@ -489,6 +496,10 @@ const styles = StyleSheet.create({
   chatContainer: {
     flex: 1,
     backgroundColor: colors.backgroundCard,
+  },
+  chatContentContainer: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
   },
   chatMessages: {
     flex: 1,
