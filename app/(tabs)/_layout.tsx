@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 
 import { useOrientationContext } from '@src/contexts/OrientationContext';
 import { IconHome, IconSettings } from '@src/assets/icons';
-import { colors, spacing } from '@src/theme';
+import { colors } from '@src/theme';
 
 const TabLayout = () => {
   const { isLandscape } = useOrientationContext();
@@ -20,14 +20,9 @@ const TabLayout = () => {
               backgroundColor: colors.backgroundCard,
               borderTopColor: colors.border,
               borderTopWidth: 1,
-              paddingTop: spacing.sm,
-              paddingBottom: spacing.sm,
-              height: 60,
             },
-        tabBarItemStyle: {
-          paddingVertical: spacing.xs,
-        },
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
