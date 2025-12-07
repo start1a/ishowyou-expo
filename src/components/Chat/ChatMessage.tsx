@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginRight: spacing.sm,
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-start',
   },
   avatar: {
     width: sizes.avatarSm,
