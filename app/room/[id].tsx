@@ -59,6 +59,13 @@ const RoomDetailScreen = () => {
     currentTime,
     isPlaying,
     videoId: selectedVideo.videoId,
+    onSyncVideoChange: (videoId) => {
+      // 동기화된 영상으로 변경
+      const video = VIDEO_LIST.find(v => v.videoId === videoId);
+      if (video) {
+        setSelectedVideo(video);
+      }
+    },
   });
 
   // 동기화 토글 핸들러 (방장/멤버에 따라 다른 함수 호출)
@@ -232,40 +239,31 @@ const RoomDetailScreen = () => {
   // 풀스크린 모드일 때는 비디오 플레이어만 표시
   if (isLandscape) {
     return (
-      <View style={{ flex: 1 }}>
-        <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
-        <View style={{ width: insets.left, position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: colors.backgroundDark }} />
+      <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center' }}>
+        <VideoPlayerComponent
+          videoId={selectedVideo.videoId}
+          onTimeUpdate={(current, total) => {
+            setCurrentTime(current);
+            setDuration(total);
+          }}
+          isPlaying={isPlaying}
+          onPlayStateChange={setIsPlaying}
+          isSyncEnabled={isSyncEnabled}
+          isOwner={isOwner}
+          onSyncToggle={handleSyncToggle}
+          syncTime={syncState?.currentTime}
+          syncIsPlaying={syncState?.isPlaying}
+          onSyncUpdate={updateSyncImmediately}
+        />
 
         <View style={{
           flex: 1,
-          flexDirection: 'row',
-          justifyContent: 'center',
+          backgroundColor: colors.backgroundCard,
+          paddingEnd: insets.right,
+          paddingBottom: insets.bottom,
+          paddingTop: insets.top,
         }}>
-          <VideoPlayerComponent
-            videoId={selectedVideo.videoId}
-            onTimeUpdate={(current, total) => {
-              setCurrentTime(current);
-              setDuration(total);
-            }}
-            isPlaying={isPlaying}
-            onPlayStateChange={setIsPlaying}
-            isSyncEnabled={isSyncEnabled}
-            isOwner={isOwner}
-            onSyncToggle={handleSyncToggle}
-            syncTime={syncState?.currentTime}
-            syncIsPlaying={syncState?.isPlaying}
-            onSyncUpdate={updateSyncImmediately}
-          />
-
-          <View style={{
-            flex: 1,
-            backgroundColor: colors.backgroundCard,
-            paddingEnd: insets.right,
-            paddingBottom: insets.bottom,
-            paddingTop: insets.top,
-          }}>
-            {renderTabContent()}
-          </View>
+          {renderTabContent()}
         </View>
       </View>
     );
@@ -274,10 +272,9 @@ const RoomDetailScreen = () => {
   // 세로 모드
   return (
     <View style={{ flex: 1 }}>
-      <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
       <View style={{ height: insets.top, backgroundColor: colors.backgroundDark }} />
 
-      <SafeAreaView style={{
+      <View style={{
         flex: 1,
         flexDirection: 'column',
         justifyContent: 'center',
@@ -335,7 +332,7 @@ const RoomDetailScreen = () => {
           playerHeight={playerHeight}
           style={{ bottom: insets.bottom }}
         />
-      </SafeAreaView>
+      </View>
     </View>
   );
 

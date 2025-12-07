@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { database } from '@src/config/firebase';
-import { ref, onValue, set, off } from 'firebase/database';
+import { ref, onValue, set, update, off } from 'firebase/database';
 import { SyncState } from '@src/api/types';
 
 interface UseVideoSyncProps {
@@ -11,6 +11,7 @@ interface UseVideoSyncProps {
   videoId: string;
   onSyncTimeChange?: (time: number) => void;
   onSyncPlayStateChange?: (isPlaying: boolean) => void;
+  onSyncVideoChange?: (videoId: string) => void;
 }
 
 interface UseVideoSyncReturn {
@@ -37,9 +38,13 @@ export const useVideoSync = ({
   videoId,
   onSyncTimeChange,
   onSyncPlayStateChange,
+  onSyncVideoChange,
 }: UseVideoSyncProps): UseVideoSyncReturn => {
   // 방장: 동기화 제어 On/Off
   const [isSyncControlEnabled, setIsSyncControlEnabled] = useState(false);
+
+  // 마지막으로 동기화된 videoId 추적 (중복 호출 방지)
+  const lastSyncedVideoIdRef = useRef<string>(videoId);
 
   // 멤버: 동기화 따라가기 On/Off
   const [isSyncFollowEnabled, setIsSyncFollowEnabled] = useState(false);
@@ -94,15 +99,13 @@ export const useVideoSync = ({
 
     lastUpdateRef.current = now;
 
-    const syncData: SyncState = {
-      isEnabled: true,
+    // 자주 변경되는 필드만 부분 업데이트 (videoId 포함)
+    update(syncRef.current, {
       currentTime,
       isPlaying,
       videoId,
       updatedAt: now,
-    };
-
-    set(syncRef.current, syncData).catch((error) => {
+    }).catch((error) => {
       console.error('동기화 상태 업데이트 실패:', error);
     });
   }, [isOwner, isSyncControlEnabled, currentTime, isPlaying, videoId]);
@@ -114,6 +117,16 @@ export const useVideoSync = ({
     // 오래된 데이터(5초 이상)는 무시
     const dataAge = Date.now() - syncState.updatedAt;
     if (dataAge > 5000) return;
+
+    // 영상이 변경되었으면 즉시 변경 (중복 호출 방지)
+    if (syncState.videoId && syncState.videoId !== lastSyncedVideoIdRef.current) {
+      lastSyncedVideoIdRef.current = syncState.videoId;
+      onSyncVideoChange?.(syncState.videoId);
+      // 영상 변경 시 시간도 함께 동기화
+      onSyncTimeChange?.(syncState.currentTime);
+      onSyncPlayStateChange?.(syncState.isPlaying);
+      return;
+    }
 
     // 네트워크 지연 보정: 재생 중이면 지연 시간만큼 보정
     const networkDelay = dataAge / 1000;
@@ -131,7 +144,7 @@ export const useVideoSync = ({
     if (syncState.isPlaying !== isPlaying) {
       onSyncPlayStateChange?.(syncState.isPlaying);
     }
-  }, [syncState, isSyncFollowEnabled, isOwner, currentTime, isPlaying, onSyncTimeChange, onSyncPlayStateChange]);
+  }, [syncState, isSyncFollowEnabled, isOwner, currentTime, isPlaying, onSyncTimeChange, onSyncPlayStateChange, onSyncVideoChange]);
 
   // 방장: 동기화 제어 토글
   const toggleSyncControl = useCallback(async () => {
@@ -183,16 +196,16 @@ export const useVideoSync = ({
   const updateSyncImmediately = useCallback((time: number, playing: boolean) => {
     if (!isOwner || !isSyncControlEnabled || !syncRef.current) return;
 
-    const syncData: SyncState = {
-      isEnabled: true,
+    const now = Date.now();
+    lastUpdateRef.current = now;
+
+    // 자주 변경되는 필드만 부분 업데이트 (videoId 포함)
+    update(syncRef.current, {
       currentTime: time,
       isPlaying: playing,
       videoId,
-      updatedAt: Date.now(),
-    };
-
-    lastUpdateRef.current = Date.now();
-    set(syncRef.current, syncData).catch((error) => {
+      updatedAt: now,
+    }).catch((error) => {
       console.error('즉시 동기화 업데이트 실패:', error);
     });
   }, [isOwner, isSyncControlEnabled, videoId]);
