@@ -51,6 +51,17 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+// 채팅 메시지 (messages/{roomId}/{date}/{messageId})
+export interface ChatMessage {
+  id: string;
+  roomId: string;
+  userId: string;
+  displayName: string;
+  photoURL: string | null;
+  content: string;
+  createdAt: number;
+}
+
 // User profile stored in /users/{userId}
 export interface UserProfile {
   userId: string;
