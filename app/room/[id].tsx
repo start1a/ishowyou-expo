@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, Keyboard, TouchableWithoutFeedback, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Drawer } from 'react-native-drawer-layout';
@@ -245,6 +245,8 @@ const RoomDetailScreen = () => {
   if (isLandscape) {
     return (
       <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center' }}>
+        <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
+        
         <VideoPlayerComponent
           videoId={selectedVideo.videoId}
           onTimeUpdate={(current, total) => {
@@ -261,30 +263,32 @@ const RoomDetailScreen = () => {
           onSyncUpdate={updateSyncImmediately}
         />
 
-        <View style={{
-          flex: 1,
-          backgroundColor: colors.backgroundCard,
-          paddingEnd: insets.right,
-          paddingBottom: insets.bottom,
-          paddingTop: insets.top,
-        }}>
-          <View style={styles.chatMessages}>
-            <Text style={styles.chatPlaceholderText}>채팅 기능 준비 중...</Text>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={{
+            flex: 1,
+            backgroundColor: colors.backgroundCard,
+            paddingEnd: insets.right,
+            paddingBottom: insets.bottom,
+            paddingTop: insets.top,
+          }}>
+            <View style={styles.chatMessages}>
+              <Text style={styles.chatPlaceholderText}>채팅 기능 준비 중...</Text>
+            </View>
+            <ChatInput
+              onSend={(message) => {
+                console.log('Send message:', message);
+              }}
+              onVideoListPress={() => setIsVideoListVisible(true)}
+            />
+            <VideoListBottomSheet
+              visible={isVideoListVisible}
+              onClose={() => setIsVideoListVisible(false)}
+              videos={VIDEO_LIST}
+              onVideoSelect={setSelectedVideo}
+              currentVideoId={selectedVideo.videoId}
+            />
           </View>
-          <ChatInput
-            onSend={(message) => {
-              console.log('Send message:', message);
-            }}
-            onVideoListPress={() => setIsVideoListVisible(true)}
-          />
-          <VideoListBottomSheet
-            visible={isVideoListVisible}
-            onClose={() => setIsVideoListVisible(false)}
-            videos={VIDEO_LIST}
-            onVideoSelect={setSelectedVideo}
-            currentVideoId={selectedVideo.videoId}
-          />
-        </View>
+        </TouchableWithoutFeedback>
       </View>
     );
   }
@@ -359,6 +363,7 @@ const RoomDetailScreen = () => {
       drawerPosition="right"
     >
       <View style={{ flex: 1 }}>
+        <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
         {/* 헤더 */}
         <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity
@@ -398,19 +403,21 @@ const RoomDetailScreen = () => {
           />
 
           {/* 채팅 영역 */}
-          <View style={styles.chatContainer}>
-            <View style={styles.chatMessages}>
-              <Text style={styles.chatPlaceholderText}>채팅 기능 준비 중...</Text>
-            </View>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.chatContainer}>
+              <View style={styles.chatMessages}>
+                <Text style={styles.chatPlaceholderText}>채팅 기능 준비 중...</Text>
+              </View>
 
-            <ChatInput
-              onSend={(message) => {
-                console.log('Send message:', message);
-                // TODO: 채팅 메시지 전송 구현
-              }}
-              onVideoListPress={() => setIsVideoListVisible(true)}
-            />
-          </View>
+              <ChatInput
+                onSend={(message) => {
+                  console.log('Send message:', message);
+                  // TODO: 채팅 메시지 전송 구현
+                }}
+                onVideoListPress={() => setIsVideoListVisible(true)}
+              />
+            </View>
+          </TouchableWithoutFeedback>
 
           {/* 영상 목록 바텀시트 */}
           <VideoListBottomSheet

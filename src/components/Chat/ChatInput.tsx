@@ -82,12 +82,14 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: scaleHeight(40),
+    minHeight: scaleHeight(40),
     backgroundColor: colors.backgroundCard,
     borderRadius: sizes.radiusMd,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     color: colors.textPrimary,
     fontSize: 15,
+    lineHeight: 20,
   },
   sendButton: {
     width: scaleWidth(40),
