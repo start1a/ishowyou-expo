@@ -553,6 +553,8 @@ const styles = StyleSheet.create({
   roomInfoHeader: {
     backgroundColor: colors.backgroundCard,
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
+    marginBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
