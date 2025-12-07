@@ -19,7 +19,7 @@ import { usePlayerSize } from '@src/hooks/usePlayerSize';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
 import { VIDEO_LIST } from '@src/constants/videoData';
 import { colors, spacing, sizes, typography } from '@src/theme';
-import { IconBack, IconExitRoom } from '@src/assets/icons';
+import { IconBack, IconExitRoom, IconUser } from '@src/assets/icons';
 
 const RoomDetailScreen = () => {
 
@@ -338,16 +338,16 @@ const RoomDetailScreen = () => {
         ListFooterComponent={() => (
           <View style={styles.drawerFooter}>
             <TouchableOpacity
-              style={styles.leaveButton}
+              style={styles.footerButton}
               onPress={handleLeaveRoom}
             >
               <IconExitRoom width={18} height={18} color={colors.textSecondary} />
-              <Text style={styles.leaveButtonText}>나가기</Text>
+              <Text style={styles.footerButtonText}>방 나가기</Text>
             </TouchableOpacity>
 
             {currentUserRole === 'owner' && (
               <TouchableOpacity
-                style={styles.deleteButton}
+                style={[styles.footerButton, styles.deleteButton]}
                 onPress={handleDeleteRoom}
               >
                 <Text style={styles.deleteButtonText}>방 삭제</Text>
@@ -385,8 +385,12 @@ const RoomDetailScreen = () => {
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => setIsDrawerOpen(true)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.memberBadge}>{members.length}</Text>
+            <View style={styles.memberBadgeContainer}>
+              <IconUser width={14} height={14} color={colors.textPrimary} />
+              <Text style={styles.memberBadge}>{members.length}</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -484,14 +488,11 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   drawerFooter: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
+    flexDirection: 'column',
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.lg,
-    marginTop: spacing.lg,
-    backgroundColor: colors.backgroundCard,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: spacing.md,
+    marginTop: spacing.md,
+    gap: spacing.sm,
     marginBottom: spacing.xl,
   },
   // 채팅 스타일
@@ -535,14 +536,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
   },
-  memberBadge: {
-    fontSize: 14,
-    color: colors.textPrimary,
+  memberBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: 12,
-    overflow: 'hidden',
+    borderRadius: 16,
+    gap: 4,
+  },
+  memberBadge: {
+    fontSize: 12,
+    color: colors.textPrimary,
     fontWeight: '600',
   },
   roomInfoHeader: {
@@ -578,29 +583,28 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginBottom: spacing.sm,
   },
-  leaveButton: {
+  footerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    justifyContent: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.md,
     borderRadius: sizes.radiusMd,
+    backgroundColor: colors.backgroundElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  leaveButtonText: {
+  footerButtonText: {
     ...typography.bodySmall,
     color: colors.textSecondary,
   },
   deleteButton: {
-    backgroundColor: colors.error,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: sizes.radiusMd,
-    flex: 1,
-    alignItems: 'center',
-    maxWidth: 120,
+    backgroundColor: 'transparent',
+    borderColor: colors.error,
   },
   deleteButtonText: {
-    ...typography.buttonSmall,
-    color: colors.textOnPrimary,
+    ...typography.bodySmall,
+    color: colors.error,
   },
   sectionTitle: {
     ...typography.h4,
