@@ -3,7 +3,7 @@ import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, sizes } from '@src/theme';
 import { scaleWidth, scaleHeight } from '@src/DeviceScale';
-import { VideoListIcon, SendIcon } from '@src/components/Icons';
+import { IconVideoList, IconSend } from '@src/assets/icons';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -33,7 +33,7 @@ export const ChatInput = ({
         onPress={onVideoListPress}
         disabled={disabled}
       >
-        <VideoListIcon size={24} color={colors.textSecondary} />
+        <IconVideoList width={24} height={24} color={colors.textSecondary} />
       </TouchableOpacity>
 
       <TextInput
@@ -52,8 +52,9 @@ export const ChatInput = ({
         onPress={handleSend}
         disabled={!message.trim() || disabled}
       >
-        <SendIcon
-          size={20}
+        <IconSend
+          width={20}
+          height={20}
           color={message.trim() ? colors.textOnPrimary : colors.textMuted}
         />
       </TouchableOpacity>

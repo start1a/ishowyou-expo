@@ -18,6 +18,7 @@ import { usePlayerSize } from '@src/hooks/usePlayerSize';
 import { scaleWidth } from '@src/DeviceScale';
 import { VIDEO_LIST } from '@src/constants/videoData';
 import { colors, spacing, sizes, typography } from '@src/theme';
+import { IconBack, IconExitRoom } from '@src/assets/icons';
 
 const RoomDetailScreen = () => {
 
@@ -327,6 +328,7 @@ const RoomDetailScreen = () => {
               style={styles.leaveButton}
               onPress={handleLeaveRoom}
             >
+              <IconExitRoom width={18} height={18} color={colors.textSecondary} />
               <Text style={styles.leaveButtonText}>나가기</Text>
             </TouchableOpacity>
 
@@ -363,7 +365,7 @@ const RoomDetailScreen = () => {
             style={styles.headerButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.headerButtonText}>{'<'}</Text>
+            <IconBack width={24} height={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>{room?.name}</Text>
           <TouchableOpacity
@@ -570,6 +572,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   leaveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingVertical: spacing.md,
     borderRadius: sizes.radiusMd,
   },
