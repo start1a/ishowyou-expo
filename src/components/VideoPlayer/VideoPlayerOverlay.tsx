@@ -1,11 +1,14 @@
 import React, { useRef, useEffect } from 'react';
 import { StyleSheet, View, PanResponder, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PLAYER_STATES } from 'react-native-youtube-iframe';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
 import { LandscapeProgressBar } from '@src/components/ProgressBar';
 import { VideoPlayerControls } from '@src/components/VideoPlayer/VideoPlayerControls';
 import { VideoTimeDisplay } from '@src/components/VideoPlayer/VideoTimeDisplay';
 import { FullScreenButton } from '@src/components/VideoPlayer/FullScreenButton';
+import { SyncToggle } from '@src/components/VideoPlayer/SyncToggle';
+import { spacing } from '@/src/theme';
 
 interface VideoPlayerOverlayProps {
   isControllerVisible: boolean;
@@ -21,6 +24,10 @@ interface VideoPlayerOverlayProps {
   onDragStart: () => void;
   onDragUpdate: (time: number) => void;
   onDragEnd: (time: number) => void;
+  // 동기화 관련 props
+  isSyncEnabled?: boolean;
+  isOwner?: boolean;
+  onSyncToggle?: () => void;
 }
 
 export const VideoPlayerOverlay = ({
@@ -37,7 +44,11 @@ export const VideoPlayerOverlay = ({
   onDragStart,
   onDragUpdate,
   onDragEnd,
+  isSyncEnabled = false,
+  isOwner = false,
+  onSyncToggle,
 }: VideoPlayerOverlayProps) => {
+  const insets = useSafeAreaInsets();
   const isDragging = useRef(false);
   const startDragTime = useRef(0);
   const latestDragTime = useRef(0);
@@ -122,6 +133,22 @@ export const VideoPlayerOverlay = ({
     >
       {isControllerVisible && (
         <>
+          {/* 좌측 상단 동기화 토글 */}
+          {onSyncToggle && (
+            <View
+              style={[
+                styles.syncToggleContainer,
+                isLandscape && { top: insets.top + scaleHeight(8) }
+              ]}
+            >
+              <SyncToggle
+                isEnabled={isSyncEnabled}
+                isOwner={isOwner}
+                onToggle={onSyncToggle}
+              />
+            </View>
+          )}
+
           <View style={{ flex: 1 }}>
             <VideoPlayerControls
               playingState={playingState}
@@ -165,13 +192,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   containerVisible: {
-    backgroundColor: 'transparent', // 투명 배경 유지
-    // TouchableOpacity 때는 필요 없었지만 View는 기본적으로 터치를 막지 않음.
-    // 하지만 PanResponder가 이벤트를 가로채므로 상관없음.
-    // 기존에 투명이었던 이유는 뒤의 비디오를 가리지 않기 위함.
-    // 여기서도 backgroundColor는 transparent여야 함.
-    // 하지만 controls나 overlay가 있으면 반투명 배경이 있을 수 있음.
-    // 기존 코드에서는 'transparent' 였음.
+    backgroundColor: 'transparent',
+  },
+  syncToggleContainer: {
+    position: 'absolute',
+    top: scaleHeight(16),
+    left: scaleWidth(16),
+    zIndex: 10,
   },
   bottomControlsContainer: {
     position: 'absolute',
@@ -184,7 +211,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingHorizontal: scaleWidth(20),
+    paddingHorizontal: scaleWidth(16),
     paddingBottom: scaleHeight(16)
   },
   progressBarLandscape: {

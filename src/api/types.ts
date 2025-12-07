@@ -28,6 +28,15 @@ export interface VideoState {
   updatedBy: string;
 }
 
+// 동기화 상태 (rooms/{roomId}/sync)
+export interface SyncState {
+  isEnabled: boolean;        // 방장이 동기화 제어를 활성화했는지
+  currentTime: number;       // 현재 동기화 시간
+  isPlaying: boolean;        // 재생 상태
+  videoId: string;           // 현재 재생 중인 비디오 ID
+  updatedAt: number;         // 마지막 업데이트 시간
+}
+
 export interface CreateRoomRequest {
   name: string;
   description?: string;
