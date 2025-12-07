@@ -3,15 +3,15 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StatusBar } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { OrientationProvider } from '@src/contexts/OrientationContext';
 import { AuthProvider } from '@src/contexts/AuthContext';
 import AuthNavigator from '@src/components/Auth/AuthNavigator';
+import { colors } from '@/src/theme';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -57,11 +57,8 @@ const RootLayoutNav = () => {
     <AuthProvider>
       <OrientationProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <StatusBar 
-            style="light" 
-            backgroundColor="transparent" 
-            translucent={Platform.OS === 'ios'} 
-          />
+          <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
+
           <AuthNavigator />
         </ThemeProvider>
       </OrientationProvider>
