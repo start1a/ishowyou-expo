@@ -8,13 +8,17 @@ import { colors, spacing, sizes, typography, shadows } from '@src/theme';
 interface VideoListProps {
     videos: VideoData[];
     onVideoSelect: (video: VideoData) => void;
+    currentVideoId?: string;
 }
 
-export const VideoList = ({ videos, onVideoSelect }: VideoListProps) => {
+export const VideoList = ({ videos, onVideoSelect, currentVideoId }: VideoListProps) => {
 
-    const renderVideoItem = ({ item }: { item: VideoData }) => (
+    const renderVideoItem = ({ item }: { item: VideoData }) => {
+        const isPlaying = item.videoId === currentVideoId;
+
+        return (
         <TouchableOpacity
-            style={styles.videoItem}
+            style={[styles.videoItem, isPlaying && styles.videoItemPlaying]}
             onPress={() => onVideoSelect(item)}
             activeOpacity={0.7}
         >
@@ -34,7 +38,8 @@ export const VideoList = ({ videos, onVideoSelect }: VideoListProps) => {
                 </View>
             </View>
         </TouchableOpacity>
-    );
+        );
+    };
 
     return (
         <FlatList
@@ -94,5 +99,9 @@ const styles = StyleSheet.create({
     metaText: {
         fontSize: 11,
         color: colors.textMuted,
+    },
+    videoItemPlaying: {
+        borderColor: colors.primary,
+        borderWidth: 2,
     },
 });

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@src/contexts/AuthContext';
 import { colors, spacing, sizes, typography } from '@src/theme';
+import { IconLogout } from '@src/assets/icons';
 
 const SettingsScreen = () => {
   const { user, logout } = useAuth();
@@ -46,7 +47,10 @@ const SettingsScreen = () => {
 
         <View style={styles.menuSection}>
           <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-            <Text style={styles.menuItemTextDanger}>로그아웃</Text>
+            <View style={styles.menuItemContent}>
+              <IconLogout width={20} height={20} color={colors.error} />
+              <Text style={styles.menuItemTextDanger}>로그아웃</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -110,6 +114,11 @@ const styles = StyleSheet.create({
   menuItem: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  menuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   menuItemTextDanger: {
     ...typography.body,
