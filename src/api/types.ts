@@ -8,6 +8,18 @@ export interface Room {
   createdAt: number;
   members?: { [userId: string]: Omit<RoomMember, 'userId'> };
   videoState?: VideoState;
+  videos?: RoomVideo[];
+}
+
+// Room에 저장되는 영상 정보 (간소화된 형태)
+export interface RoomVideo {
+  videoId: string;
+  title: string;
+  thumbnail: string;
+  duration?: number;
+  channelName?: string;
+  addedBy: string;
+  addedAt: number;
 }
 
 export interface RoomMember {

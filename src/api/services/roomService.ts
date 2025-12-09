@@ -1,7 +1,7 @@
 import { API_CONFIG } from '@src/api/config';
-import { Room, CreateRoomRequest, ApiResponse } from '@src/api/types';
+import { Room, CreateRoomRequest, ApiResponse, RoomVideo } from '@src/api/types';
 import { database } from '@src/config/firebase';
-import { ref, get, push, set, remove } from 'firebase/database';
+import { ref, get, push, set, remove, update } from 'firebase/database';
 
 export class RoomService {
   // Mock 데이터 사용 시 지연 시뮬레이션
@@ -172,6 +172,116 @@ export class RoomService {
       return {
         success: false,
         error: error instanceof Error ? error.message : '방 삭제에 실패했습니다'
+      };
+    }
+  }
+
+  // 방에 영상 추가
+  static async addVideoToRoom(
+    roomId: string,
+    video: Omit<RoomVideo, 'addedAt'>
+  ): Promise<ApiResponse<RoomVideo>> {
+    if (API_CONFIG.USE_MOCK) {
+      await this.mockDelay();
+      const mockVideo: RoomVideo = { ...video, addedAt: Date.now() };
+      return { success: true, data: mockVideo };
+    }
+
+    try {
+      // 현재 방의 영상 목록 조회
+      const roomRef = ref(database, `rooms/${roomId}`);
+      const snapshot = await get(roomRef);
+
+      if (!snapshot.exists()) {
+        return { success: false, error: '방을 찾을 수 없습니다' };
+      }
+
+      const roomData = snapshot.val();
+      const currentVideos: RoomVideo[] = roomData.videos || [];
+
+      // 이미 추가된 영상인지 확인
+      const isDuplicate = currentVideos.some(v => v.videoId === video.videoId);
+      if (isDuplicate) {
+        return { success: false, error: '이미 추가된 영상입니다' };
+      }
+
+      // 새 영상 추가
+      const newVideo: RoomVideo = {
+        ...video,
+        addedAt: Date.now()
+      };
+
+      const updatedVideos = [...currentVideos, newVideo];
+      await update(roomRef, { videos: updatedVideos });
+
+      return { success: true, data: newVideo };
+    } catch (error) {
+      console.error('Firebase 영상 추가 오류:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '영상 추가에 실패했습니다'
+      };
+    }
+  }
+
+  // 방에서 영상 제거
+  static async removeVideoFromRoom(
+    roomId: string,
+    videoId: string
+  ): Promise<ApiResponse<void>> {
+    if (API_CONFIG.USE_MOCK) {
+      await this.mockDelay();
+      return { success: true, data: undefined };
+    }
+
+    try {
+      const roomRef = ref(database, `rooms/${roomId}`);
+      const snapshot = await get(roomRef);
+
+      if (!snapshot.exists()) {
+        return { success: false, error: '방을 찾을 수 없습니다' };
+      }
+
+      const roomData = snapshot.val();
+      const currentVideos: RoomVideo[] = roomData.videos || [];
+
+      const updatedVideos = currentVideos.filter(v => v.videoId !== videoId);
+      await update(roomRef, { videos: updatedVideos });
+
+      return { success: true, data: undefined };
+    } catch (error) {
+      console.error('Firebase 영상 제거 오류:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '영상 제거에 실패했습니다'
+      };
+    }
+  }
+
+  // 방의 영상 목록 조회
+  static async getVideosFromRoom(roomId: string): Promise<ApiResponse<RoomVideo[]>> {
+    if (API_CONFIG.USE_MOCK) {
+      await this.mockDelay();
+      return { success: true, data: [] };
+    }
+
+    try {
+      const roomRef = ref(database, `rooms/${roomId}`);
+      const snapshot = await get(roomRef);
+
+      if (!snapshot.exists()) {
+        return { success: false, error: '방을 찾을 수 없습니다' };
+      }
+
+      const roomData = snapshot.val();
+      const videos: RoomVideo[] = roomData.videos || [];
+
+      return { success: true, data: videos };
+    } catch (error) {
+      console.error('Firebase 영상 목록 조회 오류:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '영상 목록을 불러오는데 실패했습니다'
       };
     }
   }
