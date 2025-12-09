@@ -21,6 +21,7 @@ interface VideoListBottomSheetProps {
   videos: VideoData[];
   onVideoSelect: (video: VideoData) => void;
   currentVideoId?: string;
+  onAddVideoPress?: () => void;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -32,6 +33,7 @@ export const VideoListBottomSheet = ({
   videos,
   onVideoSelect,
   currentVideoId,
+  onAddVideoPress,
 }: VideoListBottomSheetProps) => {
   const insets = useSafeAreaInsets();
 
@@ -61,6 +63,19 @@ export const VideoListBottomSheet = ({
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* YouTube에서 추가 버튼 */}
+          {onAddVideoPress && (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
+                onClose();
+                onAddVideoPress();
+              }}
+            >
+              <Text style={styles.addButtonText}>+ YouTube에서 영상 추가</Text>
+            </TouchableOpacity>
+          )}
 
           <View style={styles.listContainer}>
             <VideoList
@@ -118,5 +133,17 @@ const styles = StyleSheet.create({
   listContainer: {
     flex: 1,
     minHeight: scaleHeight(200),
+  },
+  addButton: {
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.sm,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.primary,
+    borderRadius: sizes.radiusMd,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    ...typography.bodyMedium,
+    color: colors.textOnPrimary,
   },
 });

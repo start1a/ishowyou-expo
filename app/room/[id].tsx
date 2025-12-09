@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, StatusBar } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Drawer } from 'react-native-drawer-layout';
@@ -17,13 +18,27 @@ import { RoomService } from '@src/api';
 import { useOrientationContext } from '@src/contexts/OrientationContext';
 import { usePlayerSize } from '@src/hooks/usePlayerSize';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
-import { VIDEO_LIST } from '@src/constants/videoData';
+import { VideoData } from '@src/types/VideoData';
+import { RoomVideo } from '@src/api/types';
+import { VideoUtils } from '@src/utils/VideoUtils';
 import { colors, spacing, sizes, typography } from '@src/theme';
 import { IconBack, IconExitRoom, IconUser } from '@src/assets/icons';
+import { YouTubeBrowser } from '@src/components/YouTubeBrowser';
+
+// RoomVideo를 VideoData로 변환하는 헬퍼 함수
+const roomVideoToVideoData = (roomVideo: RoomVideo): VideoData => ({
+  id: roomVideo.videoId,
+  title: roomVideo.title,
+  videoId: roomVideo.videoId,
+  thumbnail: roomVideo.thumbnail,
+  duration: roomVideo.duration || 0,
+  channelName: roomVideo.channelName || 'YouTube',
+  uploadDate: new Date(roomVideo.addedAt).toISOString().split('T')[0],
+});
 
 const RoomDetailScreen = () => {
 
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, sharedVideoId } = useLocalSearchParams<{ id: string; sharedVideoId?: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const { room, loading, error, refetch } = useRoom(id || '');
@@ -46,8 +61,12 @@ const RoomDetailScreen = () => {
 
   const [currentUserRole, setCurrentUserRole] = useState<'owner' | 'admin' | 'member'>('member');
 
+  // 동적 영상 목록 상태
+  const [videoList, setVideoList] = useState<VideoData[]>([]);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(true);
+
   // 비디오 플레이어 상태
-  const [selectedVideo, setSelectedVideo] = useState(VIDEO_LIST[0]);
+  const [selectedVideo, setSelectedVideo] = useState<VideoData | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -68,10 +87,10 @@ const RoomDetailScreen = () => {
     isOwner,
     currentTime,
     isPlaying,
-    videoId: selectedVideo.videoId,
+    videoId: selectedVideo?.videoId || '',
     onSyncVideoChange: (videoId) => {
       // 동기화된 영상으로 변경
-      const video = VIDEO_LIST.find(v => v.videoId === videoId);
+      const video = videoList.find(v => v.videoId === videoId);
       if (video) {
         setSelectedVideo(video);
       }
@@ -95,6 +114,78 @@ const RoomDetailScreen = () => {
 
   // 드로어 상태
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // YouTube 브라우저 상태
+  const [isYouTubeBrowserVisible, setIsYouTubeBrowserVisible] = useState(false);
+
+  // Firebase에서 영상 목록 불러오기
+  useEffect(() => {
+    const loadVideos = async () => {
+      if (!id) return;
+
+      setIsLoadingVideos(true);
+      try {
+        const response = await RoomService.getVideosFromRoom(id);
+        if (response.success && response.data) {
+          const videos = response.data.map(roomVideoToVideoData);
+          setVideoList(videos);
+
+          // 첫 번째 영상을 기본 선택 (이미 선택된 영상이 없을 때만)
+          if (!selectedVideo && videos.length > 0) {
+            setSelectedVideo(videos[0]);
+          }
+        }
+      } catch (error) {
+        console.error('영상 목록 불러오기 오류:', error);
+      } finally {
+        setIsLoadingVideos(false);
+      }
+    };
+
+    loadVideos();
+  }, [id]);
+
+  // 공유된 비디오 처리 및 방에 추가
+  useEffect(() => {
+    const handleSharedVideo = async () => {
+      if (!sharedVideoId || !id || !currentUserId) return;
+
+      // 기존 영상 목록에서 찾기
+      const existingVideo = videoList.find(v => v.videoId === sharedVideoId);
+      if (existingVideo) {
+        setSelectedVideo(existingVideo);
+        return;
+      }
+
+      // YouTube oEmbed API로 영상 정보 가져오기 (무료)
+      const videoInfo = await VideoUtils.fetchVideoInfo(sharedVideoId);
+
+      // 공유된 비디오를 방에 추가
+      const newRoomVideo: Omit<RoomVideo, 'addedAt'> = {
+        videoId: sharedVideoId,
+        title: videoInfo?.title || '공유된 영상',
+        thumbnail: videoInfo?.thumbnail || VideoUtils.getThumbnailUrl(sharedVideoId, 'high'),
+        channelName: videoInfo?.channelName || 'YouTube',
+        addedBy: currentUserId,
+      };
+
+      const response = await RoomService.addVideoToRoom(id, newRoomVideo);
+      if (response.success && response.data) {
+        const newVideoData = roomVideoToVideoData(response.data);
+        setVideoList(prev => [...prev, newVideoData]);
+        setSelectedVideo(newVideoData);
+        Alert.alert('영상 추가', `"${newRoomVideo.title}" 영상이 추가되었습니다.`);
+      } else if (response.error === '이미 추가된 영상입니다') {
+        // 이미 있는 영상이면 해당 영상 선택
+        const video = videoList.find(v => v.videoId === sharedVideoId);
+        if (video) {
+          setSelectedVideo(video);
+        }
+      }
+    };
+
+    handleSharedVideo();
+  }, [sharedVideoId, id, currentUserId, videoList]);
 
   const WIDTH_PLAY_HEAD = scaleWidth(15);
 
@@ -220,6 +311,43 @@ const RoomDetailScreen = () => {
     );
   };
 
+  // YouTube 브라우저에서 영상 선택 시 처리
+  const handleYouTubeVideoSelect = async (video: {
+    videoId: string;
+    title: string;
+    channelName: string;
+    thumbnail: string;
+  }) => {
+    if (!id || !currentUserId) return;
+
+    // 이미 목록에 있는지 확인
+    const existingVideo = videoList.find(v => v.videoId === video.videoId);
+    if (existingVideo) {
+      setSelectedVideo(existingVideo);
+      Alert.alert('알림', '이미 추가된 영상입니다. 해당 영상을 선택합니다.');
+      return;
+    }
+
+    // 방에 영상 추가
+    const newRoomVideo: Omit<RoomVideo, 'addedAt'> = {
+      videoId: video.videoId,
+      title: video.title,
+      thumbnail: video.thumbnail,
+      channelName: video.channelName,
+      addedBy: currentUserId,
+    };
+
+    const response = await RoomService.addVideoToRoom(id, newRoomVideo);
+    if (response.success && response.data) {
+      const newVideoData = roomVideoToVideoData(response.data);
+      setVideoList(prev => [...prev, newVideoData]);
+      setSelectedVideo(newVideoData);
+      Alert.alert('영상 추가 완료', `"${video.title}" 영상이 추가되었습니다.`);
+    } else {
+      Alert.alert('오류', response.error || '영상 추가에 실패했습니다.');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -254,22 +382,28 @@ const RoomDetailScreen = () => {
     return (
       <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center' }}>
         <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
-        
-        <VideoPlayerComponent
-          videoId={selectedVideo.videoId}
-          onTimeUpdate={(current, total) => {
-            setCurrentTime(current);
-            setDuration(total);
-          }}
-          isPlaying={isPlaying}
-          onPlayStateChange={setIsPlaying}
-          isSyncEnabled={isSyncEnabled}
-          isOwner={isOwner}
-          onSyncToggle={handleSyncToggle}
-          syncTime={syncState?.currentTime}
-          syncIsPlaying={syncState?.isPlaying}
-          onSyncUpdate={updateSyncImmediately}
-        />
+
+        {selectedVideo ? (
+          <VideoPlayerComponent
+            videoId={selectedVideo.videoId}
+            onTimeUpdate={(current, total) => {
+              setCurrentTime(current);
+              setDuration(total);
+            }}
+            isPlaying={isPlaying}
+            onPlayStateChange={setIsPlaying}
+            isSyncEnabled={isSyncEnabled}
+            isOwner={isOwner}
+            onSyncToggle={handleSyncToggle}
+            syncTime={syncState?.currentTime}
+            syncIsPlaying={syncState?.isPlaying}
+            onSyncUpdate={updateSyncImmediately}
+          />
+        ) : (
+          <View style={[styles.noVideoContainer, { flex: 1 }]}>
+            <Text style={styles.noVideoText}>영상을 추가해주세요</Text>
+          </View>
+        )}
 
         <KeyboardAvoidingView
           style={{
@@ -279,7 +413,7 @@ const RoomDetailScreen = () => {
             paddingBottom: insets.bottom,
             paddingTop: insets.top,
           }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
         >
           <ChatList
             messages={messages}
@@ -293,9 +427,16 @@ const RoomDetailScreen = () => {
           <VideoListBottomSheet
             visible={isVideoListVisible}
             onClose={() => setIsVideoListVisible(false)}
-            videos={VIDEO_LIST}
+            videos={videoList}
             onVideoSelect={setSelectedVideo}
-            currentVideoId={selectedVideo.videoId}
+            currentVideoId={selectedVideo?.videoId || ''}
+            onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
+          />
+          {/* YouTube 브라우저 (가로 모드) */}
+          <YouTubeBrowser
+            visible={isYouTubeBrowserVisible}
+            onClose={() => setIsYouTubeBrowserVisible(false)}
+            onSelectVideo={handleYouTubeVideoSelect}
           />
         </KeyboardAvoidingView>
       </View>
@@ -394,31 +535,38 @@ const RoomDetailScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={{
-          flex: 1,
-          flexDirection: 'column',
-          justifyContent: 'center',
-        }}>
-          <VideoPlayerComponent
-            videoId={selectedVideo.videoId}
-            onTimeUpdate={(current, total) => {
-              setCurrentTime(current);
-              setDuration(total);
-            }}
-            isPlaying={isPlaying}
-            onPlayStateChange={setIsPlaying}
-            isSyncEnabled={isSyncEnabled}
-            isOwner={isOwner}
-            onSyncToggle={handleSyncToggle}
-            syncTime={syncState?.currentTime}
-            syncIsPlaying={syncState?.isPlaying}
-            onSyncUpdate={updateSyncImmediately}
-          />
+        <View style={{ flex: 1 }}>
+          {selectedVideo ? (
+            <VideoPlayerComponent
+              videoId={selectedVideo.videoId}
+              onTimeUpdate={(current, total) => {
+                setCurrentTime(current);
+                setDuration(total);
+              }}
+              isPlaying={isPlaying}
+              onPlayStateChange={setIsPlaying}
+              isSyncEnabled={isSyncEnabled}
+              isOwner={isOwner}
+              onSyncToggle={handleSyncToggle}
+              syncTime={syncState?.currentTime}
+              syncIsPlaying={syncState?.isPlaying}
+              onSyncUpdate={updateSyncImmediately}
+            />
+          ) : (
+            <View style={[styles.noVideoContainer, { height: playerHeight }]}>
+              <Text style={styles.noVideoText}>
+                {isLoadingVideos ? '영상 불러오는 중...' : '영상을 추가해주세요'}
+              </Text>
+              <Text style={styles.noVideoSubtext}>
+                YouTube에서 영상을 공유하거나{'\n'}영상 목록에서 추가할 수 있습니다
+              </Text>
+            </View>
+          )}
 
           {/* 채팅 영역 */}
           <KeyboardAvoidingView
             style={styles.chatContainer}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior="padding"
             keyboardVerticalOffset={insets.top + scaleHeight(24)}
           >
             <ChatList
@@ -436,18 +584,28 @@ const RoomDetailScreen = () => {
           <VideoListBottomSheet
             visible={isVideoListVisible}
             onClose={() => setIsVideoListVisible(false)}
-            videos={VIDEO_LIST}
+            videos={videoList}
             onVideoSelect={setSelectedVideo}
-            currentVideoId={selectedVideo.videoId}
+            currentVideoId={selectedVideo?.videoId || ''}
+            onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
           />
 
-          <PortraitProgressBar
-            currentTime={currentTime}
-            duration={duration}
-            playHeadWidth={WIDTH_PLAY_HEAD}
-            playerHeight={playerHeight}
-            style={{ bottom: insets.bottom }}
+          {/* YouTube 브라우저 */}
+          <YouTubeBrowser
+            visible={isYouTubeBrowserVisible}
+            onClose={() => setIsYouTubeBrowserVisible(false)}
+            onSelectVideo={handleYouTubeVideoSelect}
           />
+
+          {selectedVideo && (
+            <PortraitProgressBar
+              currentTime={currentTime}
+              duration={duration}
+              playHeadWidth={WIDTH_PLAY_HEAD}
+              playerHeight={playerHeight}
+              style={{ bottom: insets.bottom }}
+            />
+          )}
         </View>
       </View>
     </Drawer>
@@ -640,6 +798,24 @@ const styles = StyleSheet.create({
   retryButtonText: {
     ...typography.button,
     color: colors.textOnPrimary,
+  },
+  noVideoContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundDark,
+    padding: spacing.xl,
+  },
+  noVideoText: {
+    ...typography.h3,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  noVideoSubtext: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 
