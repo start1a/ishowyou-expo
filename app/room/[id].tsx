@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, Keyboard, TouchableWithoutFeedback, StatusBar, Platform } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Drawer } from 'react-native-drawer-layout';
@@ -9,17 +8,18 @@ import { useRoom } from '@src/hooks/useRoomApi';
 import { useMember } from '@src/hooks/useMemberApi';
 import { useRoomSession } from '@src/hooks/useRoomSession';
 import { useVideoSync } from '@src/hooks/useVideoSync';
+import { useMessages } from '@src/hooks/useMessages';
 import { ItemRoomMember } from '@src/components/Member';
 import { VideoPlayerComponent } from '@src/components/VideoPlayer';
 import { PortraitProgressBar } from '@src/components/ProgressBar';
-import { ChatInput, VideoListBottomSheet } from '@src/components/Chat';
+import { ChatInput, ChatList, VideoListBottomSheet } from '@src/components/Chat';
 import { RoomService } from '@src/api';
 import { useOrientationContext } from '@src/contexts/OrientationContext';
 import { usePlayerSize } from '@src/hooks/usePlayerSize';
-import { scaleWidth } from '@src/DeviceScale';
+import { scaleHeight, scaleWidth } from '@src/DeviceScale';
 import { VIDEO_LIST } from '@src/constants/videoData';
 import { colors, spacing, sizes, typography } from '@src/theme';
-import { IconBack, IconExitRoom } from '@src/assets/icons';
+import { IconBack, IconExitRoom, IconUser } from '@src/assets/icons';
 
 const RoomDetailScreen = () => {
 
@@ -34,6 +34,13 @@ const RoomDetailScreen = () => {
   // 방 멤버 관리 훅
   const { members, isConnected, joinRoom, leaveRoom } = useRoomSession(id || '', currentUserId);
   const { isLandscape } = useOrientationContext();
+
+  // 채팅 메시지 훅
+  const { messages, isLoading: messagesLoading, sendMessage } = useMessages(
+    id || '',
+    currentUserId,
+    user ? { displayName: user.displayName || '익명', photoURL: user.photoURL } : undefined
+  );
   const insets = useSafeAreaInsets();
   const { playerHeight } = usePlayerSize();
 
@@ -264,32 +271,33 @@ const RoomDetailScreen = () => {
           onSyncUpdate={updateSyncImmediately}
         />
 
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={{
+        <KeyboardAvoidingView
+          style={{
             flex: 1,
             backgroundColor: colors.backgroundCard,
             paddingEnd: insets.right,
             paddingBottom: insets.bottom,
             paddingTop: insets.top,
-          }}>
-            <View style={styles.chatMessages}>
-              <Text style={styles.chatPlaceholderText}>채팅 기능 준비 중...</Text>
-            </View>
-            <ChatInput
-              onSend={(message) => {
-                console.log('Send message:', message);
-              }}
-              onVideoListPress={() => setIsVideoListVisible(true)}
-            />
-            <VideoListBottomSheet
-              visible={isVideoListVisible}
-              onClose={() => setIsVideoListVisible(false)}
-              videos={VIDEO_LIST}
-              onVideoSelect={setSelectedVideo}
-              currentVideoId={selectedVideo.videoId}
-            />
-          </View>
-        </TouchableWithoutFeedback>
+          }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ChatList
+            messages={messages}
+            currentUserId={currentUserId || ''}
+            isLoading={messagesLoading}
+          />
+          <ChatInput
+            onSend={sendMessage}
+            onVideoListPress={() => setIsVideoListVisible(true)}
+          />
+          <VideoListBottomSheet
+            visible={isVideoListVisible}
+            onClose={() => setIsVideoListVisible(false)}
+            videos={VIDEO_LIST}
+            onVideoSelect={setSelectedVideo}
+            currentVideoId={selectedVideo.videoId}
+          />
+        </KeyboardAvoidingView>
       </View>
     );
   }
@@ -330,16 +338,16 @@ const RoomDetailScreen = () => {
         ListFooterComponent={() => (
           <View style={styles.drawerFooter}>
             <TouchableOpacity
-              style={styles.leaveButton}
+              style={styles.footerButton}
               onPress={handleLeaveRoom}
             >
               <IconExitRoom width={18} height={18} color={colors.textSecondary} />
-              <Text style={styles.leaveButtonText}>나가기</Text>
+              <Text style={styles.footerButtonText}>방 나가기</Text>
             </TouchableOpacity>
 
             {currentUserRole === 'owner' && (
               <TouchableOpacity
-                style={styles.deleteButton}
+                style={[styles.footerButton, styles.deleteButton]}
                 onPress={handleDeleteRoom}
               >
                 <Text style={styles.deleteButtonText}>방 삭제</Text>
@@ -377,8 +385,12 @@ const RoomDetailScreen = () => {
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => setIsDrawerOpen(true)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.memberBadge}>{members.length}</Text>
+            <View style={styles.memberBadgeContainer}>
+              <IconUser width={14} height={14} color={colors.textPrimary} />
+              <Text style={styles.memberBadge}>{members.length}</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -404,27 +416,21 @@ const RoomDetailScreen = () => {
           />
 
           {/* 채팅 영역 */}
-          <KeyboardAwareScrollView
+          <KeyboardAvoidingView
             style={styles.chatContainer}
-            contentContainerStyle={styles.chatContentContainer}
-            keyboardShouldPersistTaps="handled"
-            enableOnAndroid={false}
-            extraScrollHeight={Platform.OS === 'ios' ? 20 : 0}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={insets.top + scaleHeight(24)}
           >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={styles.chatMessages}>
-                <Text style={styles.chatPlaceholderText}>채팅 기능 준비 중...</Text>
-              </View>
-            </TouchableWithoutFeedback>
-
+            <ChatList
+              messages={messages}
+              currentUserId={currentUserId || ''}
+              isLoading={messagesLoading}
+            />
             <ChatInput
-              onSend={(message) => {
-                console.log('Send message:', message);
-                // TODO: 채팅 메시지 전송 구현
-              }}
+              onSend={sendMessage}
               onVideoListPress={() => setIsVideoListVisible(true)}
             />
-          </KeyboardAwareScrollView>
+          </KeyboardAvoidingView>
 
           {/* 영상 목록 바텀시트 */}
           <VideoListBottomSheet
@@ -482,33 +488,17 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   drawerFooter: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
+    flexDirection: 'column',
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.lg,
-    marginTop: spacing.lg,
-    backgroundColor: colors.backgroundCard,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: spacing.md,
+    marginTop: spacing.md,
+    gap: spacing.sm,
     marginBottom: spacing.xl,
   },
   // 채팅 스타일
   chatContainer: {
     flex: 1,
     backgroundColor: colors.backgroundCard,
-  },
-  chatContentContainer: {
-    flexGrow: 1,
-    justifyContent: 'space-between',
-  },
-  chatMessages: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chatPlaceholderText: {
-    ...typography.body,
-    color: colors.textSecondary,
   },
   videoSection: {
     backgroundColor: colors.backgroundDark,
@@ -546,19 +536,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
   },
-  memberBadge: {
-    fontSize: 14,
-    color: colors.textPrimary,
+  memberBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: 12,
-    overflow: 'hidden',
+    borderRadius: 16,
+    gap: 4,
+  },
+  memberBadge: {
+    fontSize: 12,
+    color: colors.textPrimary,
     fontWeight: '600',
   },
   roomInfoHeader: {
     backgroundColor: colors.backgroundCard,
     padding: spacing.lg,
+    paddingBottom: spacing.xl,
+    marginBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -589,29 +585,28 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginBottom: spacing.sm,
   },
-  leaveButton: {
+  footerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    justifyContent: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.md,
     borderRadius: sizes.radiusMd,
+    backgroundColor: colors.backgroundElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  leaveButtonText: {
+  footerButtonText: {
     ...typography.bodySmall,
     color: colors.textSecondary,
   },
   deleteButton: {
-    backgroundColor: colors.error,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: sizes.radiusMd,
-    flex: 1,
-    alignItems: 'center',
-    maxWidth: 120,
+    backgroundColor: 'transparent',
+    borderColor: colors.error,
   },
   deleteButtonText: {
-    ...typography.buttonSmall,
-    color: colors.textOnPrimary,
+    ...typography.bodySmall,
+    color: colors.error,
   },
   sectionTitle: {
     ...typography.h4,
