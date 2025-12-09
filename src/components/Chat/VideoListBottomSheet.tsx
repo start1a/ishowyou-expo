@@ -22,6 +22,8 @@ interface VideoListBottomSheetProps {
   onVideoSelect: (video: VideoData) => void;
   currentVideoId?: string;
   onAddVideoPress?: () => void;
+  onVideoDelete?: (video: VideoData) => void;
+  canDelete?: boolean;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -34,6 +36,8 @@ export const VideoListBottomSheet = ({
   onVideoSelect,
   currentVideoId,
   onAddVideoPress,
+  onVideoDelete,
+  canDelete = false,
 }: VideoListBottomSheetProps) => {
   const insets = useSafeAreaInsets();
 
@@ -82,6 +86,8 @@ export const VideoListBottomSheet = ({
               videos={videos}
               onVideoSelect={handleVideoSelect}
               currentVideoId={currentVideoId}
+              onVideoDelete={onVideoDelete}
+              canDelete={canDelete}
             />
           </View>
         </Pressable>

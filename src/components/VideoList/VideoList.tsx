@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { scaleWidth, scaleHeight } from '@src/DeviceScale';
 import { VideoData } from '@src/types/VideoData';
 import { VideoUtils } from '@src/utils/VideoUtils';
@@ -9,9 +9,32 @@ interface VideoListProps {
     videos: VideoData[];
     onVideoSelect: (video: VideoData) => void;
     currentVideoId?: string;
+    onVideoDelete?: (video: VideoData) => void;
+    canDelete?: boolean;
 }
 
-export const VideoList = ({ videos, onVideoSelect, currentVideoId }: VideoListProps) => {
+export const VideoList = ({
+    videos,
+    onVideoSelect,
+    currentVideoId,
+    onVideoDelete,
+    canDelete = false,
+}: VideoListProps) => {
+
+    const handleDelete = (video: VideoData) => {
+        Alert.alert(
+            '영상 삭제',
+            `"${video.title}" 영상을 목록에서 삭제하시겠습니까?`,
+            [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '삭제',
+                    style: 'destructive',
+                    onPress: () => onVideoDelete?.(video),
+                },
+            ]
+        );
+    };
 
     const renderVideoItem = ({ item }: { item: VideoData }) => {
         const isPlaying = item.videoId === currentVideoId;
@@ -20,7 +43,9 @@ export const VideoList = ({ videos, onVideoSelect, currentVideoId }: VideoListPr
         <TouchableOpacity
             style={[styles.videoItem, isPlaying && styles.videoItemPlaying]}
             onPress={() => onVideoSelect(item)}
+            onLongPress={canDelete && onVideoDelete ? () => handleDelete(item) : undefined}
             activeOpacity={0.7}
+            delayLongPress={500}
         >
             <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
             <View style={styles.videoInfo}>
@@ -32,9 +57,19 @@ export const VideoList = ({ videos, onVideoSelect, currentVideoId }: VideoListPr
                     <Text style={styles.metaText}>
                         {VideoUtils.formatViewCountWithLabel(item.viewCount)}
                     </Text>
-                    <Text style={styles.metaText}>
-                        {VideoUtils.formatDuration(item.duration)}
-                    </Text>
+                    {canDelete && onVideoDelete ? (
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={() => handleDelete(item)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            <Text style={styles.deleteButtonText}>삭제</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <Text style={styles.metaText}>
+                            {VideoUtils.formatDuration(item.duration)}
+                        </Text>
+                    )}
                 </View>
             </View>
         </TouchableOpacity>
@@ -103,5 +138,16 @@ const styles = StyleSheet.create({
     videoItemPlaying: {
         borderColor: colors.primary,
         borderWidth: 2,
+    },
+    deleteButton: {
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        backgroundColor: colors.error,
+        borderRadius: sizes.radiusSm,
+    },
+    deleteButtonText: {
+        fontSize: 11,
+        color: colors.textOnPrimary,
+        fontWeight: '600',
     },
 });
