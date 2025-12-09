@@ -6,10 +6,12 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { Platform, StatusBar } from 'react-native';
 import 'react-native-reanimated';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { OrientationProvider } from '@src/contexts/OrientationContext';
 import { AuthProvider } from '@src/contexts/AuthContext';
+import { ShareProvider } from '@src/contexts/ShareContext';
 import AuthNavigator from '@src/components/Auth/AuthNavigator';
 import { colors } from '@/src/theme';
 
@@ -54,15 +56,19 @@ const RootLayoutNav = () => {
   const colorScheme = useColorScheme();
 
   return (
-    <AuthProvider>
-      <OrientationProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
+    <KeyboardProvider>
+      <AuthProvider>
+        <ShareProvider>
+          <OrientationProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
 
-          <AuthNavigator />
-        </ThemeProvider>
-      </OrientationProvider>
-    </AuthProvider>
+              <AuthNavigator />
+            </ThemeProvider>
+          </OrientationProvider>
+        </ShareProvider>
+      </AuthProvider>
+    </KeyboardProvider>
   );
 };
 
