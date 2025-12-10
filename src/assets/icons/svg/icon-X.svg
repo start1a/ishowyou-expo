@@ -1,0 +1,17 @@
+<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- 귀여운 X 아이콘 -->
+  <path 
+    d="M10 10 L30 30" 
+    fill="none" 
+    stroke="white" 
+    stroke-width="6" 
+    stroke-linecap="round"
+  />
+  <path 
+    d="M30 10 L10 30" 
+    fill="none" 
+    stroke="white" 
+    stroke-width="6" 
+    stroke-linecap="round"
+  />
+</svg>

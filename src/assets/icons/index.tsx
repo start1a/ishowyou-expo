@@ -23,6 +23,14 @@ import IconSendSvg from './svg/icon-send.svg';
 import IconVideoListSvg from './svg/icon-video-list.svg';
 import IconUserSvg from './svg/icon-user.svg';
 import IconDoneSvg from './svg/icon-done.svg';
+import IconSearchSvg from './svg/icon-search.svg';
+import IconAddSvg from './svg/icon-add.svg';
+import IconWarningSvg from './svg/icon-warning.svg';
+import IconPlaySingleSvg from './svg/icon-play-single.svg';
+import IconPlayAllRepeatSvg from './svg/icon-play-all-repeat.svg';
+import IconPlaySingleRepeatSvg from './svg/icon-play-single-repeat.svg';
+import IconShuffleSvg from './svg/icon-shuffle.svg';
+import IconXSvg from './svg/icon-X.svg';
 
 interface IconProps extends SvgProps {
   width?: number;
@@ -95,4 +103,46 @@ export const IconUser = ({ width = sizes.iconMd, height = sizes.iconMd, color = 
 
 export const IconDone = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
   <IconDoneSvg width={width} height={height} stroke={color} {...props} />
+);
+
+export const IconSearch = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconSearchSvg width={width} height={height} stroke={color} {...props} />
+);
+
+export const IconAdd = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconAddSvg width={width} height={height} stroke={color} {...props} />
+);
+
+export const IconWarning = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconWarningSvg width={width} height={height} fill={color} {...props} />
+);
+
+// Once (단일 재생) - 화살표 + 정지
+export const IconPlayOnce = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconPlaySingleSvg width={width} height={height} color={color} {...props} />
+);
+
+// All (전체 재생) - 순환 화살표 (어두운 색상)
+export const IconPlayAll = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconPlayAllRepeatSvg width={width} height={height} color={color} {...props} />
+);
+
+// Repeat One (단일 반복) - 순환 화살표 + 숫자 1
+export const IconRepeatOne = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconPlaySingleRepeatSvg width={width} height={height} color={color} {...props} />
+);
+
+// Repeat All (전체 반복) - 순환 화살표
+export const IconRepeatAll = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconPlayAllRepeatSvg width={width} height={height} color={color} {...props} />
+);
+
+// Shuffle (셔플)
+export const IconShuffle = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconShuffleSvg width={width} height={height} color={color} {...props} />
+);
+
+// X (닫기)
+export const IconX = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconXSvg width={width} height={height} stroke={color} {...props} />
 );

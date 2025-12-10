@@ -5,6 +5,7 @@ import { VideoPlayerOverlay } from '@src/components/VideoPlayer/VideoPlayerOverl
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
 import { useOrientation } from '@src/hooks/useOrientation';
 import { usePlayerSize } from '@src/hooks/usePlayerSize';
+import { PlaybackSettings } from '@src/api/types';
 
 interface VideoPlayerComponentProps {
   videoId: string;
@@ -20,6 +21,15 @@ interface VideoPlayerComponentProps {
   syncIsPlaying?: boolean;
   // 방장용: 즉시 동기화 업데이트
   onSyncUpdate?: (time: number, isPlaying: boolean) => void;
+  // 재생 제어
+  onVideoEnded?: () => void;
+  repeatOne?: boolean;
+  // 재생 설정
+  playbackSettings?: PlaybackSettings;
+  onPlaybackSettingsChange?: (updates: Partial<PlaybackSettings>) => void;
+  isAdmin?: boolean;
+  // 토스트 메시지
+  showToast?: (message: string, thumbnail?: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export const VideoPlayerComponent = ({
@@ -33,6 +43,12 @@ export const VideoPlayerComponent = ({
   syncTime,
   syncIsPlaying,
   onSyncUpdate,
+  onVideoEnded,
+  repeatOne,
+  playbackSettings,
+  onPlaybackSettingsChange,
+  isAdmin,
+  showToast,
 }: VideoPlayerComponentProps) => {
   const playerRef = useRef<YoutubeIframeRef>(null);
   const isLandscape = useOrientation();
@@ -73,8 +89,18 @@ export const VideoPlayerComponent = ({
     if (state === PLAYER_STATES.ENDED) {
       setIsEnded(true);
       setIsPlaying(false);
+
+      if (repeatOne) {
+        setTimeout(() => {
+          playerRef.current?.seekTo(0, true);
+          setIsPlaying(true);
+          setIsEnded(false);
+        }, 100);
+      } else {
+        onVideoEnded?.();
+      }
     }
-  }, []);
+  }, [repeatOne, onVideoEnded, setIsPlaying]);
 
   const handlePlayToggle = useCallback(() => {
     let newPlaying: boolean;
@@ -248,6 +274,11 @@ export const VideoPlayerComponent = ({
         isSyncEnabled={isSyncEnabled}
         isOwner={isOwner}
         onSyncToggle={onSyncToggle}
+        playbackSettings={playbackSettings}
+        onPlaybackSettingsChange={onPlaybackSettingsChange}
+        isAdmin={isAdmin}
+        showToast={showToast}
+        isSeeking={isSeeking}
       />
     </View>
   );

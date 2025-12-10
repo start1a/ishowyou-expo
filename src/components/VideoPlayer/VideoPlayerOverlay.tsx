@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { StyleSheet, View, PanResponder, Dimensions } from 'react-native';
+import { StyleSheet, View, PanResponder, Dimensions, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PLAYER_STATES } from 'react-native-youtube-iframe';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
@@ -8,7 +8,9 @@ import { VideoPlayerControls } from '@src/components/VideoPlayer/VideoPlayerCont
 import { VideoTimeDisplay } from '@src/components/VideoPlayer/VideoTimeDisplay';
 import { FullScreenButton } from '@src/components/VideoPlayer/FullScreenButton';
 import { SyncToggle } from '@src/components/VideoPlayer/SyncToggle';
-import { spacing } from '@/src/theme';
+import { IconShuffle, IconPlayOnce, IconPlayAll, IconRepeatOne, IconRepeatAll } from '@src/assets/icons';
+import { spacing, colors, sizes } from '@/src/theme';
+import { PlaybackSettings, RepeatMode } from '@src/api/types';
 
 interface VideoPlayerOverlayProps {
   isControllerVisible: boolean;
@@ -28,6 +30,14 @@ interface VideoPlayerOverlayProps {
   isSyncEnabled?: boolean;
   isOwner?: boolean;
   onSyncToggle?: () => void;
+  // 재생 설정 관련 props
+  playbackSettings?: PlaybackSettings;
+  onPlaybackSettingsChange?: (updates: Partial<PlaybackSettings>) => void;
+  isAdmin?: boolean;
+  // 토스트 메시지
+  showToast?: (message: string, thumbnail?: string, type?: 'success' | 'error' | 'info') => void;
+  // 드래그 상태
+  isSeeking?: boolean;
 }
 
 export const VideoPlayerOverlay = ({
@@ -47,6 +57,11 @@ export const VideoPlayerOverlay = ({
   isSyncEnabled = false,
   isOwner = false,
   onSyncToggle,
+  playbackSettings,
+  onPlaybackSettingsChange,
+  isAdmin = false,
+  showToast,
+  isSeeking = false,
 }: VideoPlayerOverlayProps) => {
   const insets = useSafeAreaInsets();
   const isDragging = useRef(false);
@@ -122,6 +137,42 @@ export const VideoPlayerOverlay = ({
     })
   ).current;
 
+  // Shuffle 버튼 클릭 핸들러
+  const handleShuffleToggle = () => {
+    if (!onPlaybackSettingsChange || !playbackSettings) return;
+
+    // All 모드에서는 Shuffle 불가
+    if (playbackSettings.repeatMode === 'all') {
+      showToast?.('전체 재생 모드에서는 셔플을 사용할 수 없습니다', undefined, 'info');
+      return;
+    }
+
+    onPlaybackSettingsChange({
+      shuffle: !playbackSettings.shuffle
+    });
+  };
+
+  // Repeat 모드 순환 로직
+  const handleRepeatModeToggle = () => {
+    if (!onPlaybackSettingsChange || !playbackSettings) return;
+
+    const modes: RepeatMode[] = ['once', 'all', 'repeat-one', 'repeat-all'];
+    const currentIndex = modes.indexOf(playbackSettings.repeatMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    const nextMode = modes[nextIndex];
+
+    // All 모드로 변경 시 Shuffle 자동 OFF
+    if (nextMode === 'all' && playbackSettings.shuffle) {
+      onPlaybackSettingsChange({
+        repeatMode: nextMode,
+        shuffle: false
+      });
+      showToast?.('전체 재생 모드로 변경되어 셔플이 해제되었습니다', undefined, 'info');
+    } else {
+      onPlaybackSettingsChange({ repeatMode: nextMode });
+    }
+  };
+
   return (
     <View
       style={[
@@ -158,28 +209,99 @@ export const VideoPlayerOverlay = ({
               onSeekForward={onSeekForward}
             />
           </View>
-
-          <View style={styles.bottomControlsContainer}>
-            <View style={styles.bottomControlsRow}>
-              <VideoTimeDisplay
-                currentTime={currentTime}
-                duration={duration}
-              />
-
-              <FullScreenButton />
-            </View>
-
-            {isLandscape && (
-              <LandscapeProgressBar
-                currentTime={currentTime}
-                duration={duration}
-                playHeadWidth={playHeadWidth}
-                style={styles.progressBarLandscape}
-              />
-            )}
-          </View>
         </>
       )}
+
+      {/* 하단 컨트롤 - 시간은 드래그 중에도 표시 */}
+      <View style={styles.bottomControlsContainer}>
+        <View style={styles.bottomControlsRow}>
+          {/* 시간 표시 - 컨트롤러 visible이거나 드래그 중일 때 */}
+          {(isControllerVisible || isSeeking) && (
+            <VideoTimeDisplay
+              currentTime={currentTime}
+              duration={duration}
+            />
+          )}
+
+          {/* 나머지 컨트롤 - 컨트롤러 visible일 때만 */}
+          {isControllerVisible && (
+            <>
+              {/* 재생 모드 컨트롤 (방장만 표시) */}
+              {isAdmin && playbackSettings && onPlaybackSettingsChange && (
+                <View style={styles.playbackControls}>
+                  {/* Shuffle 버튼 */}
+                  <TouchableOpacity
+                    style={[
+                      styles.playbackButton,
+                      playbackSettings.shuffle && styles.playbackButtonActive,
+                      playbackSettings.repeatMode === 'all' && styles.playbackButtonDisabled
+                    ]}
+                    onPress={handleShuffleToggle}
+                  >
+                    <IconShuffle
+                      width={20}
+                      height={20}
+                      color={
+                        playbackSettings.repeatMode === 'all'
+                          ? colors.disabled
+                          : playbackSettings.shuffle
+                          ? colors.primary
+                          : 'white'
+                      }
+                    />
+                  </TouchableOpacity>
+
+                  {/* Repeat 버튼 (4가지 모드 순환) */}
+                  <TouchableOpacity
+                    style={[
+                      styles.playbackButton,
+                      playbackSettings.repeatMode !== 'once' && styles.playbackButtonActive
+                    ]}
+                    onPress={handleRepeatModeToggle}
+                  >
+                    {playbackSettings.repeatMode === 'once' ? (
+                      <IconPlayOnce
+                        width={20}
+                        height={20}
+                        color="white"
+                      />
+                    ) : playbackSettings.repeatMode === 'all' ? (
+                      <IconPlayAll
+                        width={20}
+                        height={20}
+                        color="white"
+                      />
+                    ) : playbackSettings.repeatMode === 'repeat-one' ? (
+                      <IconRepeatOne
+                        width={20}
+                        height={20}
+                        color={colors.primary}
+                      />
+                    ) : (
+                      <IconRepeatAll
+                        width={20}
+                        height={20}
+                        color={colors.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <FullScreenButton />
+            </>
+          )}
+        </View>
+
+        {isControllerVisible && isLandscape && (
+          <LandscapeProgressBar
+            currentTime={currentTime}
+            duration={duration}
+            playHeadWidth={playHeadWidth}
+            style={styles.progressBarLandscape}
+          />
+        )}
+      </View>
     </View>
   );
 };
@@ -192,7 +314,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   containerVisible: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
   syncToggleContainer: {
     position: 'absolute',
@@ -216,6 +338,26 @@ const styles = StyleSheet.create({
   },
   progressBarLandscape: {
     paddingBottom: scaleHeight(20),
-  }
+  },
+  playbackControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginLeft: spacing.md,
+  },
+  playbackButton: {
+    width: 36,
+    height: 36,
+    borderRadius: sizes.radiusFull,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playbackButtonActive: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  playbackButtonDisabled: {
+    opacity: 0.4,
+  },
 });
 

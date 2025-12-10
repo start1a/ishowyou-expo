@@ -1,0 +1,27 @@
+<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- 오른쪽 화살표 -->
+  <path
+    d="M6 20 L20 20"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
+  <path
+    d="M16 12 L26 20 L16 28"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <!-- 작은 네모 (정지) -->
+  <rect
+    x="30"
+    y="14"
+    width="6"
+    height="12"
+    rx="2"
+    fill="currentColor"
+  />
+</svg>

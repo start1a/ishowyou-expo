@@ -13,7 +13,7 @@ import {
 import { WebView, WebViewNavigation, WebViewMessageEvent } from 'react-native-webview';
 import { colors, spacing, typography, sizes } from '@src/theme';
 import { VideoUtils } from '@src/utils/VideoUtils';
-import { IconBack } from '@src/assets/icons';
+import { IconBack, IconX } from '@src/assets/icons';
 
 interface VideoInfo {
   videoId: string;
@@ -202,7 +202,7 @@ export const YouTubeBrowser: React.FC<YouTubeBrowserProps> = ({
           <Text style={styles.headerTitle}>YouTube 영상 추가</Text>
 
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
-            <Text style={styles.closeButtonText}>✕</Text>
+            <IconX width={24} height={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -282,7 +282,7 @@ export const YouTubeBrowser: React.FC<YouTubeBrowserProps> = ({
                     style={styles.removeButton}
                     onPress={() => removeFromQueue(item.videoId)}
                   >
-                    <Text style={styles.removeButtonText}>✕</Text>
+                    <IconX width={16} height={16} color={colors.textSecondary} />
                   </TouchableOpacity>
                   <Text style={styles.queueItemTitle} numberOfLines={1}>
                     {item.title}
@@ -322,11 +322,6 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: spacing.xs,
-  },
-  closeButtonText: {
-    fontSize: 20,
-    color: colors.textPrimary,
-    fontWeight: '300',
   },
   headerTitle: {
     ...typography.bodyMedium,
@@ -400,11 +395,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  removeButtonText: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '600',
   },
   queueItemTitle: {
     ...typography.caption,

@@ -1,7 +1,7 @@
 import { API_CONFIG } from '@src/api/config';
-import { Room, CreateRoomRequest, ApiResponse, RoomVideo } from '@src/api/types';
+import { Room, CreateRoomRequest, ApiResponse, RoomVideo, PlaybackSettings } from '@src/api/types';
 import { database } from '@src/config/firebase';
-import { ref, get, push, set, remove, update } from 'firebase/database';
+import { ref, get, push, set, remove, update, onValue } from 'firebase/database';
 
 export class RoomService {
   // Mock 데이터 사용 시 지연 시뮬레이션
@@ -284,5 +284,49 @@ export class RoomService {
         error: error instanceof Error ? error.message : '영상 목록을 불러오는데 실패했습니다'
       };
     }
+  }
+
+  // 재생 설정 업데이트
+  static async updatePlaybackSettings(
+    roomId: string,
+    settings: PlaybackSettings
+  ): Promise<ApiResponse<void>> {
+    if (API_CONFIG.USE_MOCK) {
+      await this.mockDelay();
+      return { success: true, data: undefined };
+    }
+
+    try {
+      const playbackRef = ref(database, `rooms/${roomId}/playbackSettings`);
+      const cleanedSettings = this.cleanFirebaseData(settings);
+      await set(playbackRef, cleanedSettings);
+
+      return { success: true, data: undefined };
+    } catch (error) {
+      console.error('Firebase 재생 설정 업데이트 오류:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '재생 설정 업데이트에 실패했습니다'
+      };
+    }
+  }
+
+  // 재생 설정 구독
+  static subscribeToPlaybackSettings(
+    roomId: string,
+    callback: (settings: PlaybackSettings | null) => void
+  ): () => void {
+    const playbackRef = ref(database, `rooms/${roomId}/playbackSettings`);
+
+    const unsubscribe = onValue(playbackRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const settings = snapshot.val() as PlaybackSettings;
+        callback(settings);
+      } else {
+        callback(null);
+      }
+    });
+
+    return unsubscribe;
   }
 }

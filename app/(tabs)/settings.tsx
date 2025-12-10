@@ -1,33 +1,45 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@src/contexts/AuthContext';
 import { colors, spacing, sizes, typography } from '@src/theme';
 import { IconLogout } from '@src/assets/icons';
+import { ConfirmDialog } from '@src/components/ConfirmDialog';
+import { Toast } from '@src/components/Toast';
 
 const SettingsScreen = () => {
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
 
+  // 로그아웃 확인 다이얼로그 상태
+  const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);
+
+  // 토스트 알림 상태
+  const [toastState, setToastState] = useState<{
+    visible: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({ visible: false, message: '', type: 'success' });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'error') => {
+    setToastState({ visible: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToastState(prev => ({ ...prev, visible: false }));
+  };
+
   const handleLogout = () => {
-    Alert.alert(
-      '로그아웃',
-      '정말 로그아웃 하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '로그아웃',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (error) {
-              Alert.alert('오류', '로그아웃에 실패했습니다.');
-            }
-          },
-        },
-      ]
-    );
+    setIsLogoutConfirmVisible(true);
+  };
+
+  const confirmLogout = async () => {
+    setIsLogoutConfirmVisible(false);
+    try {
+      await logout();
+    } catch (error) {
+      showToast('로그아웃에 실패했습니다.', 'error');
+    }
   };
 
   return (
@@ -54,6 +66,26 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* 로그아웃 확인 다이얼로그 */}
+      <ConfirmDialog
+        visible={isLogoutConfirmVisible}
+        title="로그아웃"
+        message="정말 로그아웃 하시겠습니까?"
+        confirmText="로그아웃"
+        cancelText="취소"
+        confirmColor={colors.error}
+        onConfirm={confirmLogout}
+        onCancel={() => setIsLogoutConfirmVisible(false)}
+      />
+
+      {/* 토스트 알림 */}
+      <Toast
+        visible={toastState.visible}
+        message={toastState.message}
+        type={toastState.type}
+        onHide={hideToast}
+      />
     </View>
   );
 };

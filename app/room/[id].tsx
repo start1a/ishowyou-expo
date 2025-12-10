@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, StatusBar } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Drawer } from 'react-native-drawer-layout';
 import { useAuth } from '@src/contexts/AuthContext';
@@ -19,12 +19,13 @@ import { useOrientationContext } from '@src/contexts/OrientationContext';
 import { usePlayerSize } from '@src/hooks/usePlayerSize';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
 import { VideoData } from '@src/types/VideoData';
-import { RoomVideo } from '@src/api/types';
+import { RoomVideo, PlaybackSettings } from '@src/api/types';
 import { VideoUtils } from '@src/utils/VideoUtils';
 import { colors, spacing, sizes, typography } from '@src/theme';
-import { IconBack, IconExitRoom, IconUser } from '@src/assets/icons';
+import { IconBack, IconExitRoom, IconUser, IconX } from '@src/assets/icons';
 import { YouTubeBrowser } from '@src/components/YouTubeBrowser';
 import { Toast } from '@src/components/Toast';
+import { ConfirmDialog } from '@src/components/ConfirmDialog';
 
 // RoomVideo를 VideoData로 변환하는 헬퍼 함수
 const roomVideoToVideoData = (roomVideo: RoomVideo): VideoData => ({
@@ -41,6 +42,7 @@ const RoomDetailScreen = () => {
 
   const { id, sharedVideoId } = useLocalSearchParams<{ id: string; sharedVideoId?: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { user } = useAuth();
   const { room, loading, error, refetch } = useRoom(id || '');
 
@@ -71,6 +73,14 @@ const RoomDetailScreen = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // 재생 설정 상태
+  const [playbackSettings, setPlaybackSettings] = useState<PlaybackSettings>({
+    repeatMode: 'all',
+    shuffle: false,
+    setBy: '',
+    updatedAt: Date.now()
+  });
 
   // 방장 여부 확인
   const isOwner = currentUserRole === 'owner';
@@ -123,17 +133,42 @@ const RoomDetailScreen = () => {
   const [toastState, setToastState] = useState<{
     visible: boolean;
     message: string;
+    subtitle?: string;
     thumbnail?: string;
     type: 'success' | 'error' | 'info';
   }>({ visible: false, message: '', type: 'success' });
 
-  const showToast = (message: string, thumbnail?: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToastState({ visible: true, message, thumbnail, type });
+  // 방 나가기 확인 다이얼로그 상태
+  const [isLeaveConfirmVisible, setIsLeaveConfirmVisible] = useState(false);
+
+  // 멤버 추방 확인 다이얼로그 상태
+  const [removeMemberConfirm, setRemoveMemberConfirm] = useState<{
+    visible: boolean;
+    member: any | null;
+  }>({ visible: false, member: null });
+
+  // 방 삭제 확인 다이얼로그 상태
+  const [isDeleteRoomConfirmVisible, setIsDeleteRoomConfirmVisible] = useState(false);
+
+  const showToast = (
+    message: string,
+    thumbnail?: string,
+    type: 'success' | 'error' | 'info' = 'success',
+    subtitle?: string
+  ) => {
+    setToastState({ visible: true, message, subtitle, thumbnail, type });
   };
 
   const hideToast = () => {
     setToastState(prev => ({ ...prev, visible: false }));
   };
+
+  // 백 스와이프 제스처 비활성화 (유저 실수 방지)
+  useEffect(() => {
+    navigation.setOptions({
+      gestureEnabled: false,
+    });
+  }, [navigation]);
 
   // Firebase에서 영상 목록 불러오기
   useEffect(() => {
@@ -160,6 +195,22 @@ const RoomDetailScreen = () => {
     };
 
     loadVideos();
+  }, [id]);
+
+  // Firebase에서 재생 설정 구독
+  useEffect(() => {
+    if (!id) return;
+
+    const unsubscribe = RoomService.subscribeToPlaybackSettings(
+      id,
+      (settings) => {
+        if (settings) {
+          setPlaybackSettings(settings);
+        }
+      }
+    );
+
+    return unsubscribe;
   }, [id]);
 
   // 공유된 비디오 처리 및 방에 추가
@@ -215,30 +266,25 @@ const RoomDetailScreen = () => {
     const result = await updateMemberRole(id || '', member.userId, newRole);
 
     if (result) {
-      Alert.alert('성공', `${member.displayName}님의 권한이 변경되었습니다.`);
+      showToast(`${member.displayName}님의 권한이 변경되었습니다.`, undefined, 'success');
     }
   };
 
-  const handleRemoveMember = async (member: any) => {
+  const handleRemoveMember = (member: any) => {
     if (!isAdmin || member.userId === currentUserId || member.role === 'owner') return;
+    setRemoveMemberConfirm({ visible: true, member });
+  };
 
-    Alert.alert(
-      '멤버 추방',
-      `${member.displayName}님을 방에서 추방하시겠습니까?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '추방',
-          style: 'destructive',
-          onPress: async () => {
-            const success = await removeMember(id || '', member.userId);
-            if (success) {
-              Alert.alert('성공', `${member.displayName}님이 방에서 추방되었습니다.`);
-            }
-          },
-        },
-      ]
-    );
+  const confirmRemoveMember = async () => {
+    const member = removeMemberConfirm.member;
+    setRemoveMemberConfirm({ visible: false, member: null });
+
+    if (member) {
+      const success = await removeMember(id || '', member.userId);
+      if (success) {
+        showToast(`${member.displayName}님이 방에서 추방되었습니다.`, undefined, 'success');
+      }
+    }
   };
 
   useEffect(() => {
@@ -278,54 +324,37 @@ const RoomDetailScreen = () => {
   }, [room, currentUserId, isConnected, user]);
 
   const handleLeaveRoom = () => {
-    Alert.alert(
-      '방 나가기',
-      '정말로 방을 나가시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '나가기',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // 방에서 나가기 (useRoomSession이 Firebase에서 멤버 제거)
-              await leaveRoom();
-              router.back();
-            } catch (error) {
-              Alert.alert('오류', '방 나가기에 실패했습니다.');
-            }
-          },
-        },
-      ]
-    );
+    setIsLeaveConfirmVisible(true);
+  };
+
+  const confirmLeaveRoom = async () => {
+    setIsLeaveConfirmVisible(false);
+    try {
+      // 방에서 나가기 (useRoomSession이 Firebase에서 멤버 제거)
+      await leaveRoom();
+      router.back();
+    } catch (error) {
+      showToast('방 나가기에 실패했습니다.', undefined, 'error');
+    }
   };
 
   const handleDeleteRoom = () => {
-    Alert.alert(
-      '방 삭제',
-      '정말로 방을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await RoomService.deleteRoom(id || '');
-              if (response.success) {
-                Alert.alert('완료', '방이 삭제되었습니다.', [
-                  { text: '확인', onPress: () => router.back() }
-                ]);
-              } else {
-                Alert.alert('오류', response.error || '방 삭제에 실패했습니다.');
-              }
-            } catch (error) {
-              Alert.alert('오류', '네트워크 오류가 발생했습니다.');
-            }
-          },
-        },
-      ]
-    );
+    setIsDeleteRoomConfirmVisible(true);
+  };
+
+  const confirmDeleteRoom = async () => {
+    setIsDeleteRoomConfirmVisible(false);
+    try {
+      const response = await RoomService.deleteRoom(id || '');
+      if (response.success) {
+        showToast('방이 삭제되었습니다.', undefined, 'success');
+        router.back();
+      } else {
+        showToast(response.error || '방 삭제에 실패했습니다.', undefined, 'error');
+      }
+    } catch (error) {
+      showToast('네트워크 오류가 발생했습니다.', undefined, 'error');
+    }
   };
 
   // YouTube 브라우저에서 영상 선택 시 처리
@@ -365,6 +394,87 @@ const RoomDetailScreen = () => {
     }
   };
 
+  // YouTube 브라우저에서 여러 영상 선택 시 배치 처리
+  const handleYouTubeMultipleVideoSelect = async (
+    videos: { videoId: string; title: string; channelName: string; thumbnail: string }[]
+  ) => {
+    if (!id || !currentUserId) return;
+
+    const results = {
+      total: videos.length,
+      succeeded: [] as typeof videos,
+      failed: [] as typeof videos,
+      alreadyExists: [] as typeof videos,
+    };
+
+    // 각 영상 처리
+    for (const video of videos) {
+      // 이미 목록에 있는지 확인
+      const existingVideo = videoList.find(v => v.videoId === video.videoId);
+      if (existingVideo) {
+        results.alreadyExists.push(video);
+        continue;
+      }
+
+      // 방에 영상 추가
+      const newRoomVideo: Omit<RoomVideo, 'addedAt'> = {
+        videoId: video.videoId,
+        title: video.title,
+        thumbnail: video.thumbnail,
+        channelName: video.channelName,
+        addedBy: currentUserId,
+      };
+
+      const response = await RoomService.addVideoToRoom(id, newRoomVideo);
+      if (response.success && response.data) {
+        const newVideoData = roomVideoToVideoData(response.data);
+        setVideoList(prev => [...prev, newVideoData]);
+        results.succeeded.push(video);
+
+        // 첫 번째 성공한 영상을 선택
+        if (results.succeeded.length === 1) {
+          setSelectedVideo(newVideoData);
+        }
+      } else {
+        results.failed.push(video);
+      }
+    }
+
+    // 집계 결과에 따른 토스트 표시
+    const successCount = results.succeeded.length;
+    const failCount = results.failed.length;
+    const existCount = results.alreadyExists.length;
+
+    if (successCount === results.total) {
+      // 모두 성공
+      showToast(
+        `${successCount}개 영상이 추가되었습니다`,
+        results.succeeded[0]?.thumbnail,
+        'success'
+      );
+    } else if (successCount === 0) {
+      // 모두 실패
+      if (existCount > 0) {
+        showToast('이미 추가된 영상입니다', undefined, 'info');
+      } else {
+        showToast('영상을 추가할 수 없습니다', undefined, 'error');
+      }
+    } else {
+      // 부분 성공
+      const failedTitles = results.failed.map(v => v.title).join(', ');
+      const subtitle = failCount > 0
+        ? `${failCount}개 영상을 불러올 수 없습니다: ${failedTitles}`
+        : undefined;
+
+      showToast(
+        `${results.total}개 중 ${successCount}개 영상이 추가되었습니다`,
+        results.succeeded[0]?.thumbnail,
+        'info',
+        subtitle
+      );
+    }
+  };
+
   // 영상 삭제 처리
   const handleVideoDelete = async (video: VideoData) => {
     if (!id) return;
@@ -382,6 +492,107 @@ const RoomDetailScreen = () => {
       showToast(response.error || '영상 삭제 실패', undefined, 'error');
     }
   };
+
+  // 영상 순서 변경 처리
+  const handleVideoReorder = async (reorderedVideos: VideoData[]) => {
+    if (!id) return;
+
+    // 로컬 state 업데이트
+    setVideoList(reorderedVideos);
+
+    // TODO: 서버에 새로운 순서 저장
+    // const videoIds = reorderedVideos.map(v => v.videoId);
+    // await RoomService.updateVideoOrder(id, videoIds);
+  };
+
+  // 방장/관리자 여부 확인
+  const isAdmin = currentUserRole === 'owner' || currentUserRole === 'admin';
+
+  // 다음 영상 선택 로직
+  const getNextVideo = useCallback((
+    currentVideo: VideoData,
+    videos: VideoData[],
+    settings: PlaybackSettings
+  ): VideoData | null => {
+    const currentIndex = videos.findIndex(v => v.videoId === currentVideo.videoId);
+
+    // Repeat One: 현재 영상 반복 (VideoPlayerComponent에서 처리)
+    if (settings.repeatMode === 'repeat-one') {
+      return currentVideo;
+    }
+
+    // Once: 정지
+    if (settings.repeatMode === 'once') {
+      return null;
+    }
+
+    // Shuffle 모드
+    if (settings.shuffle) {
+      // 현재 영상 제외하고 랜덤 선택
+      const otherVideos = videos.filter(v => v.videoId !== currentVideo.videoId);
+      if (otherVideos.length === 0) return null;
+      const randomIndex = Math.floor(Math.random() * otherVideos.length);
+      return otherVideos[randomIndex];
+    }
+
+    // Sequential 모드
+    const nextIndex = currentIndex + 1;
+
+    // All: 마지막 영상이면 정지
+    if (settings.repeatMode === 'all') {
+      return nextIndex < videos.length ? videos[nextIndex] : null;
+    }
+
+    // Repeat All: 마지막 영상이면 처음으로
+    if (settings.repeatMode === 'repeat-all') {
+      return nextIndex < videos.length ? videos[nextIndex] : videos[0];
+    }
+
+    return null;
+  }, []);
+
+  // 영상 종료 처리
+  const handleVideoEnded = useCallback(() => {
+    if (!selectedVideo) return;
+
+    const nextVideo = getNextVideo(selectedVideo, videoList, playbackSettings);
+
+    if (nextVideo) {
+      if (nextVideo.videoId === selectedVideo.videoId) {
+        // Repeat One: 현재 영상 재시작 (VideoPlayerComponent에서 자동 처리)
+        console.log('Repeat One: Video will auto-restart');
+      } else {
+        // 다음 영상으로 이동하고 자동 재생
+        setSelectedVideo(nextVideo);
+        setIsPlaying(true);
+
+        // 방장이고 동기화가 켜져있으면 동기화 업데이트
+        if (isOwner && isSyncEnabled) {
+          updateSyncImmediately(0, true);
+        }
+      }
+    } else {
+      // 재생 종료
+      setIsPlaying(false);
+      console.log('Playback finished');
+    }
+  }, [selectedVideo, videoList, playbackSettings, getNextVideo, isOwner, isSyncEnabled, updateSyncImmediately]);
+
+  // 재생 설정 변경 (방장만 가능)
+  const handlePlaybackSettingsChange = useCallback(async (
+    updates: Partial<PlaybackSettings>
+  ) => {
+    if (!isAdmin || !id || !currentUserId) return;
+
+    const newSettings: PlaybackSettings = {
+      ...playbackSettings,
+      ...updates,
+      setBy: currentUserId,
+      updatedAt: Date.now()
+    };
+
+    await RoomService.updatePlaybackSettings(id, newSettings);
+  }, [isAdmin, id, currentUserId, playbackSettings]);
 
   if (loading) {
     return (
@@ -410,8 +621,6 @@ const RoomDetailScreen = () => {
     );
   }
 
-  const isAdmin = currentUserRole === 'owner' || currentUserRole === 'admin';
-
   // 풀스크린 모드일 때는 비디오 플레이어만 표시
   if (isLandscape) {
     return (
@@ -433,6 +642,12 @@ const RoomDetailScreen = () => {
             syncTime={syncState?.currentTime}
             syncIsPlaying={syncState?.isPlaying}
             onSyncUpdate={updateSyncImmediately}
+            onVideoEnded={handleVideoEnded}
+            repeatOne={playbackSettings.repeatMode === 'repeat-one'}
+            playbackSettings={playbackSettings}
+            onPlaybackSettingsChange={handlePlaybackSettingsChange}
+            isAdmin={isAdmin}
+            showToast={showToast}
           />
         ) : (
           <View style={[styles.noVideoContainer, { flex: 1 }]}>
@@ -468,20 +683,57 @@ const RoomDetailScreen = () => {
             onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
             onVideoDelete={handleVideoDelete}
             canDelete={isAdmin}
+            canReorder={isAdmin}
+            onVideoReorder={handleVideoReorder}
           />
           {/* YouTube 브라우저 (가로 모드) */}
           <YouTubeBrowser
             visible={isYouTubeBrowserVisible}
             onClose={() => setIsYouTubeBrowserVisible(false)}
             onSelectVideo={handleYouTubeVideoSelect}
+            onSelectMultipleVideos={handleYouTubeMultipleVideoSelect}
           />
           {/* 토스트 알림 (가로 모드) */}
           <Toast
             visible={toastState.visible}
             message={toastState.message}
+            subtitle={toastState.subtitle}
             thumbnail={toastState.thumbnail}
             type={toastState.type}
             onHide={hideToast}
+          />
+          {/* 방 나가기 확인 다이얼로그 (가로 모드) */}
+          <ConfirmDialog
+            visible={isLeaveConfirmVisible}
+            title="방 나가기"
+            message="정말로 방을 나가시겠습니까?"
+            confirmText="나가기"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmLeaveRoom}
+            onCancel={() => setIsLeaveConfirmVisible(false)}
+          />
+          {/* 멤버 추방 확인 다이얼로그 (가로 모드) */}
+          <ConfirmDialog
+            visible={removeMemberConfirm.visible}
+            title="멤버 추방"
+            message={`${removeMemberConfirm.member?.displayName}님을 방에서 추방하시겠습니까?`}
+            confirmText="추방"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmRemoveMember}
+            onCancel={() => setRemoveMemberConfirm({ visible: false, member: null })}
+          />
+          {/* 방 삭제 확인 다이얼로그 (가로 모드) */}
+          <ConfirmDialog
+            visible={isDeleteRoomConfirmVisible}
+            title="방 삭제"
+            message="정말로 방을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+            confirmText="삭제"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmDeleteRoom}
+            onCancel={() => setIsDeleteRoomConfirmVisible(false)}
           />
         </KeyboardAvoidingView>
       </View>
@@ -494,7 +746,7 @@ const RoomDetailScreen = () => {
       <View style={[styles.drawerHeader, { paddingTop: insets.top + spacing.md }]}>
         <Text style={styles.drawerTitle}>방 정보</Text>
         <TouchableOpacity onPress={() => setIsDrawerOpen(false)}>
-          <Text style={styles.drawerCloseButton}>✕</Text>
+          <IconX width={24} height={24} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -563,7 +815,7 @@ const RoomDetailScreen = () => {
         <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity
             style={styles.headerButton}
-            onPress={() => router.back()}
+            onPress={handleLeaveRoom}
           >
             <IconBack width={24} height={24} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -596,6 +848,12 @@ const RoomDetailScreen = () => {
               syncTime={syncState?.currentTime}
               syncIsPlaying={syncState?.isPlaying}
               onSyncUpdate={updateSyncImmediately}
+              onVideoEnded={handleVideoEnded}
+              repeatOne={playbackSettings.repeatMode === 'repeat-one'}
+              playbackSettings={playbackSettings}
+              onPlaybackSettingsChange={handlePlaybackSettingsChange}
+              isAdmin={isAdmin}
+              showToast={showToast}
             />
           ) : (
             <View style={[styles.noVideoContainer, { height: playerHeight }]}>
@@ -635,6 +893,8 @@ const RoomDetailScreen = () => {
             onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
             onVideoDelete={handleVideoDelete}
             canDelete={isAdmin}
+            canReorder={isAdmin}
+            onVideoReorder={handleVideoReorder}
           />
 
           {/* YouTube 브라우저 */}
@@ -642,15 +902,51 @@ const RoomDetailScreen = () => {
             visible={isYouTubeBrowserVisible}
             onClose={() => setIsYouTubeBrowserVisible(false)}
             onSelectVideo={handleYouTubeVideoSelect}
+            onSelectMultipleVideos={handleYouTubeMultipleVideoSelect}
           />
 
           {/* 토스트 알림 */}
           <Toast
             visible={toastState.visible}
             message={toastState.message}
+            subtitle={toastState.subtitle}
             thumbnail={toastState.thumbnail}
             type={toastState.type}
             onHide={hideToast}
+          />
+
+          {/* 방 나가기 확인 다이얼로그 */}
+          <ConfirmDialog
+            visible={isLeaveConfirmVisible}
+            title="방 나가기"
+            message="정말로 방을 나가시겠습니까?"
+            confirmText="나가기"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmLeaveRoom}
+            onCancel={() => setIsLeaveConfirmVisible(false)}
+          />
+          {/* 멤버 추방 확인 다이얼로그 */}
+          <ConfirmDialog
+            visible={removeMemberConfirm.visible}
+            title="멤버 추방"
+            message={`${removeMemberConfirm.member?.displayName}님을 방에서 추방하시겠습니까?`}
+            confirmText="추방"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmRemoveMember}
+            onCancel={() => setRemoveMemberConfirm({ visible: false, member: null })}
+          />
+          {/* 방 삭제 확인 다이얼로그 */}
+          <ConfirmDialog
+            visible={isDeleteRoomConfirmVisible}
+            title="방 삭제"
+            message="정말로 방을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+            confirmText="삭제"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmDeleteRoom}
+            onCancel={() => setIsDeleteRoomConfirmVisible(false)}
           />
 
           {selectedVideo && (
@@ -695,11 +991,6 @@ const styles = StyleSheet.create({
   drawerTitle: {
     ...typography.h3,
     color: colors.textPrimary,
-  },
-  drawerCloseButton: {
-    fontSize: 20,
-    color: colors.textSecondary,
-    padding: spacing.sm,
   },
   drawerFooter: {
     flexDirection: 'column',
