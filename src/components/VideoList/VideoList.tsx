@@ -58,11 +58,8 @@ export const VideoList = ({
                 <Text style={styles.title} numberOfLines={2}>
                     {item.title}
                 </Text>
-                <Text style={styles.channelName}>{item.channelName}</Text>
                 <View style={styles.metaInfo}>
-                    <Text style={styles.metaText}>
-                        {VideoUtils.formatViewCountWithLabel(item.viewCount)}
-                    </Text>
+                    <Text style={styles.channelName}>{item.channelName}</Text>
                     {canDelete && onVideoDelete ? (
                         <TouchableOpacity
                             style={styles.deleteButton}
@@ -138,12 +135,12 @@ const styles = StyleSheet.create({
     channelName: {
         ...typography.caption,
         color: colors.textSecondary,
-        marginBottom: spacing.sm,
+        flex: 1,
     },
     metaInfo: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'stretch',
     },
     metaText: {
         fontSize: 11,
@@ -158,6 +155,8 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.xs,
         backgroundColor: colors.error,
         borderRadius: sizes.radiusSm,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     deleteButtonText: {
         fontSize: 11,
