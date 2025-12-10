@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, StatusBar } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,9 +22,10 @@ import { VideoData } from '@src/types/VideoData';
 import { RoomVideo, PlaybackSettings } from '@src/api/types';
 import { VideoUtils } from '@src/utils/VideoUtils';
 import { colors, spacing, sizes, typography } from '@src/theme';
-import { IconBack, IconExitRoom, IconUser } from '@src/assets/icons';
+import { IconBack, IconExitRoom, IconUser, IconX } from '@src/assets/icons';
 import { YouTubeBrowser } from '@src/components/YouTubeBrowser';
 import { Toast } from '@src/components/Toast';
+import { ConfirmDialog } from '@src/components/ConfirmDialog';
 
 // RoomVideo를 VideoData로 변환하는 헬퍼 함수
 const roomVideoToVideoData = (roomVideo: RoomVideo): VideoData => ({
@@ -136,6 +137,18 @@ const RoomDetailScreen = () => {
     thumbnail?: string;
     type: 'success' | 'error' | 'info';
   }>({ visible: false, message: '', type: 'success' });
+
+  // 방 나가기 확인 다이얼로그 상태
+  const [isLeaveConfirmVisible, setIsLeaveConfirmVisible] = useState(false);
+
+  // 멤버 추방 확인 다이얼로그 상태
+  const [removeMemberConfirm, setRemoveMemberConfirm] = useState<{
+    visible: boolean;
+    member: any | null;
+  }>({ visible: false, member: null });
+
+  // 방 삭제 확인 다이얼로그 상태
+  const [isDeleteRoomConfirmVisible, setIsDeleteRoomConfirmVisible] = useState(false);
 
   const showToast = (
     message: string,
@@ -253,30 +266,25 @@ const RoomDetailScreen = () => {
     const result = await updateMemberRole(id || '', member.userId, newRole);
 
     if (result) {
-      Alert.alert('성공', `${member.displayName}님의 권한이 변경되었습니다.`);
+      showToast(`${member.displayName}님의 권한이 변경되었습니다.`, undefined, 'success');
     }
   };
 
-  const handleRemoveMember = async (member: any) => {
+  const handleRemoveMember = (member: any) => {
     if (!isAdmin || member.userId === currentUserId || member.role === 'owner') return;
+    setRemoveMemberConfirm({ visible: true, member });
+  };
 
-    Alert.alert(
-      '멤버 추방',
-      `${member.displayName}님을 방에서 추방하시겠습니까?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '추방',
-          style: 'destructive',
-          onPress: async () => {
-            const success = await removeMember(id || '', member.userId);
-            if (success) {
-              Alert.alert('성공', `${member.displayName}님이 방에서 추방되었습니다.`);
-            }
-          },
-        },
-      ]
-    );
+  const confirmRemoveMember = async () => {
+    const member = removeMemberConfirm.member;
+    setRemoveMemberConfirm({ visible: false, member: null });
+
+    if (member) {
+      const success = await removeMember(id || '', member.userId);
+      if (success) {
+        showToast(`${member.displayName}님이 방에서 추방되었습니다.`, undefined, 'success');
+      }
+    }
   };
 
   useEffect(() => {
@@ -316,54 +324,37 @@ const RoomDetailScreen = () => {
   }, [room, currentUserId, isConnected, user]);
 
   const handleLeaveRoom = () => {
-    Alert.alert(
-      '방 나가기',
-      '정말로 방을 나가시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '나가기',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // 방에서 나가기 (useRoomSession이 Firebase에서 멤버 제거)
-              await leaveRoom();
-              router.back();
-            } catch (error) {
-              Alert.alert('오류', '방 나가기에 실패했습니다.');
-            }
-          },
-        },
-      ]
-    );
+    setIsLeaveConfirmVisible(true);
+  };
+
+  const confirmLeaveRoom = async () => {
+    setIsLeaveConfirmVisible(false);
+    try {
+      // 방에서 나가기 (useRoomSession이 Firebase에서 멤버 제거)
+      await leaveRoom();
+      router.back();
+    } catch (error) {
+      showToast('방 나가기에 실패했습니다.', undefined, 'error');
+    }
   };
 
   const handleDeleteRoom = () => {
-    Alert.alert(
-      '방 삭제',
-      '정말로 방을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await RoomService.deleteRoom(id || '');
-              if (response.success) {
-                Alert.alert('완료', '방이 삭제되었습니다.', [
-                  { text: '확인', onPress: () => router.back() }
-                ]);
-              } else {
-                Alert.alert('오류', response.error || '방 삭제에 실패했습니다.');
-              }
-            } catch (error) {
-              Alert.alert('오류', '네트워크 오류가 발생했습니다.');
-            }
-          },
-        },
-      ]
-    );
+    setIsDeleteRoomConfirmVisible(true);
+  };
+
+  const confirmDeleteRoom = async () => {
+    setIsDeleteRoomConfirmVisible(false);
+    try {
+      const response = await RoomService.deleteRoom(id || '');
+      if (response.success) {
+        showToast('방이 삭제되었습니다.', undefined, 'success');
+        router.back();
+      } else {
+        showToast(response.error || '방 삭제에 실패했습니다.', undefined, 'error');
+      }
+    } catch (error) {
+      showToast('네트워크 오류가 발생했습니다.', undefined, 'error');
+    }
   };
 
   // YouTube 브라우저에서 영상 선택 시 처리
@@ -711,6 +702,39 @@ const RoomDetailScreen = () => {
             type={toastState.type}
             onHide={hideToast}
           />
+          {/* 방 나가기 확인 다이얼로그 (가로 모드) */}
+          <ConfirmDialog
+            visible={isLeaveConfirmVisible}
+            title="방 나가기"
+            message="정말로 방을 나가시겠습니까?"
+            confirmText="나가기"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmLeaveRoom}
+            onCancel={() => setIsLeaveConfirmVisible(false)}
+          />
+          {/* 멤버 추방 확인 다이얼로그 (가로 모드) */}
+          <ConfirmDialog
+            visible={removeMemberConfirm.visible}
+            title="멤버 추방"
+            message={`${removeMemberConfirm.member?.displayName}님을 방에서 추방하시겠습니까?`}
+            confirmText="추방"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmRemoveMember}
+            onCancel={() => setRemoveMemberConfirm({ visible: false, member: null })}
+          />
+          {/* 방 삭제 확인 다이얼로그 (가로 모드) */}
+          <ConfirmDialog
+            visible={isDeleteRoomConfirmVisible}
+            title="방 삭제"
+            message="정말로 방을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+            confirmText="삭제"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmDeleteRoom}
+            onCancel={() => setIsDeleteRoomConfirmVisible(false)}
+          />
         </KeyboardAvoidingView>
       </View>
     );
@@ -722,7 +746,7 @@ const RoomDetailScreen = () => {
       <View style={[styles.drawerHeader, { paddingTop: insets.top + spacing.md }]}>
         <Text style={styles.drawerTitle}>방 정보</Text>
         <TouchableOpacity onPress={() => setIsDrawerOpen(false)}>
-          <Text style={styles.drawerCloseButton}>✕</Text>
+          <IconX width={24} height={24} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -891,6 +915,40 @@ const RoomDetailScreen = () => {
             onHide={hideToast}
           />
 
+          {/* 방 나가기 확인 다이얼로그 */}
+          <ConfirmDialog
+            visible={isLeaveConfirmVisible}
+            title="방 나가기"
+            message="정말로 방을 나가시겠습니까?"
+            confirmText="나가기"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmLeaveRoom}
+            onCancel={() => setIsLeaveConfirmVisible(false)}
+          />
+          {/* 멤버 추방 확인 다이얼로그 */}
+          <ConfirmDialog
+            visible={removeMemberConfirm.visible}
+            title="멤버 추방"
+            message={`${removeMemberConfirm.member?.displayName}님을 방에서 추방하시겠습니까?`}
+            confirmText="추방"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmRemoveMember}
+            onCancel={() => setRemoveMemberConfirm({ visible: false, member: null })}
+          />
+          {/* 방 삭제 확인 다이얼로그 */}
+          <ConfirmDialog
+            visible={isDeleteRoomConfirmVisible}
+            title="방 삭제"
+            message="정말로 방을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+            confirmText="삭제"
+            cancelText="취소"
+            confirmColor={colors.error}
+            onConfirm={confirmDeleteRoom}
+            onCancel={() => setIsDeleteRoomConfirmVisible(false)}
+          />
+
           {selectedVideo && (
             <PortraitProgressBar
               currentTime={currentTime}
@@ -933,11 +991,6 @@ const styles = StyleSheet.create({
   drawerTitle: {
     ...typography.h3,
     color: colors.textPrimary,
-  },
-  drawerCloseButton: {
-    fontSize: 20,
-    color: colors.textSecondary,
-    padding: spacing.sm,
   },
   drawerFooter: {
     flexDirection: 'column',

@@ -30,6 +30,7 @@ import IconPlaySingleSvg from './svg/icon-play-single.svg';
 import IconPlayAllRepeatSvg from './svg/icon-play-all-repeat.svg';
 import IconPlaySingleRepeatSvg from './svg/icon-play-single-repeat.svg';
 import IconShuffleSvg from './svg/icon-shuffle.svg';
+import IconXSvg from './svg/icon-X.svg';
 
 interface IconProps extends SvgProps {
   width?: number;
@@ -139,4 +140,9 @@ export const IconRepeatAll = ({ width = sizes.iconMd, height = sizes.iconMd, col
 // Shuffle (셔플)
 export const IconShuffle = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
   <IconShuffleSvg width={width} height={height} color={color} {...props} />
+);
+
+// X (닫기)
+export const IconX = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconXSvg width={width} height={height} stroke={color} {...props} />
 );

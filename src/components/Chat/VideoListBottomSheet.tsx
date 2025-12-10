@@ -14,8 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, sizes, typography } from '@src/theme';
 import { scaleHeight } from '@src/DeviceScale';
 import { VideoList } from '@src/components/VideoList/VideoList';
-import { CloseIcon } from '@src/components/Icons';
-import { IconSearch, IconAdd } from '@src/assets/icons';
+import { IconSearch, IconAdd, IconX } from '@src/assets/icons';
 import { VideoData } from '@src/types/VideoData';
 
 interface VideoListBottomSheetProps {
@@ -121,7 +120,7 @@ export const VideoListBottomSheet = ({
                       onPress={onClose}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <CloseIcon size={24} color={colors.textSecondary} />
+                      <IconX width={24} height={24} color={colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -145,7 +144,7 @@ export const VideoListBottomSheet = ({
                       style={styles.clearButton}
                       onPress={() => setSearchQuery('')}
                     >
-                      <CloseIcon size={16} color={colors.textSecondary} />
+                      <IconX width={16} height={16} color={colors.textSecondary} />
                     </TouchableOpacity>
                   )}
                 </View>
