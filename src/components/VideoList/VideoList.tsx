@@ -1,9 +1,10 @@
-import React from 'react';
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { scaleWidth, scaleHeight } from '@src/DeviceScale';
 import { VideoData } from '@src/types/VideoData';
 import { VideoUtils } from '@src/utils/VideoUtils';
 import { colors, spacing, sizes, typography, shadows } from '@src/theme';
+import { DeleteConfirmModal } from '@src/components/DeleteConfirmModal';
 
 interface VideoListProps {
     videos: VideoData[];
@@ -20,20 +21,25 @@ export const VideoList = ({
     onVideoDelete,
     canDelete = false,
 }: VideoListProps) => {
+    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [videoToDelete, setVideoToDelete] = useState<VideoData | null>(null);
 
     const handleDelete = (video: VideoData) => {
-        Alert.alert(
-            '영상 삭제',
-            `"${video.title}" 영상을 목록에서 삭제하시겠습니까?`,
-            [
-                { text: '취소', style: 'cancel' },
-                {
-                    text: '삭제',
-                    style: 'destructive',
-                    onPress: () => onVideoDelete?.(video),
-                },
-            ]
-        );
+        setVideoToDelete(video);
+        setDeleteModalVisible(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (videoToDelete) {
+            onVideoDelete?.(videoToDelete);
+        }
+        setDeleteModalVisible(false);
+        setVideoToDelete(null);
+    };
+
+    const handleCancelDelete = () => {
+        setDeleteModalVisible(false);
+        setVideoToDelete(null);
     };
 
     const renderVideoItem = ({ item }: { item: VideoData }) => {
@@ -77,13 +83,21 @@ export const VideoList = ({
     };
 
     return (
-        <FlatList
-            data={videos}
-            keyExtractor={(item) => item.id}
-            renderItem={renderVideoItem}
-            style={styles.videoList}
-            showsVerticalScrollIndicator={false}
-        />
+        <>
+            <FlatList
+                data={videos}
+                keyExtractor={(item) => item.id}
+                renderItem={renderVideoItem}
+                style={styles.videoList}
+                showsVerticalScrollIndicator={false}
+            />
+            <DeleteConfirmModal
+                visible={deleteModalVisible}
+                video={videoToDelete}
+                onConfirm={handleConfirmDelete}
+                onCancel={handleCancelDelete}
+            />
+        </>
     );
 };
 
