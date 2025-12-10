@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, StatusBar, Platform } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -255,7 +255,7 @@ const RoomDetailScreen = () => {
     handleSharedVideo();
   }, [sharedVideoId, id, currentUserId, videoList]);
 
-  const WIDTH_PLAY_HEAD = scaleWidth(15);
+  const WIDTH_PLAY_HEAD = 15;
 
   const { updateMemberRole, removeMember } = useMember();
 
@@ -870,7 +870,7 @@ const RoomDetailScreen = () => {
           <KeyboardAvoidingView
             style={styles.chatContainer}
             behavior="padding"
-            keyboardVerticalOffset={insets.top + scaleHeight(24)}
+            keyboardVerticalOffset={Platform.OS === 'android' ? insets.top + scaleHeight(40) + spacing.sm : insets.top + scaleHeight(24)}
           >
             <ChatList
               messages={messages}
