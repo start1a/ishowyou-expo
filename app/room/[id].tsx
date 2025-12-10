@@ -563,14 +563,21 @@ const RoomDetailScreen = () => {
         // Repeat One: 현재 영상 재시작 (VideoPlayerComponent에서 자동 처리)
         console.log('Repeat One: Video will auto-restart');
       } else {
-        // 다음 영상으로 이동
+        // 다음 영상으로 이동하고 자동 재생
         setSelectedVideo(nextVideo);
+        setIsPlaying(true);
+
+        // 방장이고 동기화가 켜져있으면 동기화 업데이트
+        if (isOwner && isSyncEnabled) {
+          updateSyncImmediately(0, true);
+        }
       }
     } else {
       // 재생 종료
+      setIsPlaying(false);
       console.log('Playback finished');
     }
-  }, [selectedVideo, videoList, playbackSettings, getNextVideo]);
+  }, [selectedVideo, videoList, playbackSettings, getNextVideo, isOwner, isSyncEnabled, updateSyncImmediately]);
 
   // 재생 설정 변경 (방장만 가능)
   const handlePlaybackSettingsChange = useCallback(async (
@@ -641,6 +648,7 @@ const RoomDetailScreen = () => {
             playbackSettings={playbackSettings}
             onPlaybackSettingsChange={handlePlaybackSettingsChange}
             isAdmin={isAdmin}
+            showToast={showToast}
           />
         ) : (
           <View style={[styles.noVideoContainer, { flex: 1 }]}>
@@ -813,6 +821,7 @@ const RoomDetailScreen = () => {
               playbackSettings={playbackSettings}
               onPlaybackSettingsChange={handlePlaybackSettingsChange}
               isAdmin={isAdmin}
+              showToast={showToast}
             />
           ) : (
             <View style={[styles.noVideoContainer, { height: playerHeight }]}>

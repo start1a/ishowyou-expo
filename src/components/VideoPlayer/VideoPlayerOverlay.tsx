@@ -34,6 +34,8 @@ interface VideoPlayerOverlayProps {
   playbackSettings?: PlaybackSettings;
   onPlaybackSettingsChange?: (updates: Partial<PlaybackSettings>) => void;
   isAdmin?: boolean;
+  // 토스트 메시지
+  showToast?: (message: string, thumbnail?: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export const VideoPlayerOverlay = ({
@@ -56,6 +58,7 @@ export const VideoPlayerOverlay = ({
   playbackSettings,
   onPlaybackSettingsChange,
   isAdmin = false,
+  showToast,
 }: VideoPlayerOverlayProps) => {
   const insets = useSafeAreaInsets();
   const isDragging = useRef(false);
@@ -131,6 +134,21 @@ export const VideoPlayerOverlay = ({
     })
   ).current;
 
+  // Shuffle 버튼 클릭 핸들러
+  const handleShuffleToggle = () => {
+    if (!onPlaybackSettingsChange || !playbackSettings) return;
+
+    // All 모드에서는 Shuffle 불가
+    if (playbackSettings.repeatMode === 'all') {
+      showToast?.('전체 재생 모드에서는 셔플을 사용할 수 없습니다', undefined, 'info');
+      return;
+    }
+
+    onPlaybackSettingsChange({
+      shuffle: !playbackSettings.shuffle
+    });
+  };
+
   // Repeat 모드 순환 로직
   const handleRepeatModeToggle = () => {
     if (!onPlaybackSettingsChange || !playbackSettings) return;
@@ -138,8 +156,18 @@ export const VideoPlayerOverlay = ({
     const modes: RepeatMode[] = ['once', 'all', 'repeat-one', 'repeat-all'];
     const currentIndex = modes.indexOf(playbackSettings.repeatMode);
     const nextIndex = (currentIndex + 1) % modes.length;
+    const nextMode = modes[nextIndex];
 
-    onPlaybackSettingsChange({ repeatMode: modes[nextIndex] });
+    // All 모드로 변경 시 Shuffle 자동 OFF
+    if (nextMode === 'all' && playbackSettings.shuffle) {
+      onPlaybackSettingsChange({
+        repeatMode: nextMode,
+        shuffle: false
+      });
+      showToast?.('전체 재생 모드로 변경되어 셔플이 해제되었습니다', undefined, 'info');
+    } else {
+      onPlaybackSettingsChange({ repeatMode: nextMode });
+    }
   };
 
   return (
@@ -193,16 +221,21 @@ export const VideoPlayerOverlay = ({
                   <TouchableOpacity
                     style={[
                       styles.playbackButton,
-                      playbackSettings.shuffle && styles.playbackButtonActive
+                      playbackSettings.shuffle && styles.playbackButtonActive,
+                      playbackSettings.repeatMode === 'all' && styles.playbackButtonDisabled
                     ]}
-                    onPress={() => onPlaybackSettingsChange({
-                      shuffle: !playbackSettings.shuffle
-                    })}
+                    onPress={handleShuffleToggle}
                   >
                     <IconShuffle
                       width={20}
                       height={20}
-                      color={playbackSettings.shuffle ? colors.primary : 'white'}
+                      color={
+                        playbackSettings.repeatMode === 'all'
+                          ? colors.disabled
+                          : playbackSettings.shuffle
+                          ? colors.primary
+                          : 'white'
+                      }
                     />
                   </TouchableOpacity>
 
@@ -310,6 +343,9 @@ const styles = StyleSheet.create({
   },
   playbackButtonActive: {
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  playbackButtonDisabled: {
+    opacity: 0.4,
   },
 });
 

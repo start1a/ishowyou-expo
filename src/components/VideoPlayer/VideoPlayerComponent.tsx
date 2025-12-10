@@ -28,6 +28,8 @@ interface VideoPlayerComponentProps {
   playbackSettings?: PlaybackSettings;
   onPlaybackSettingsChange?: (updates: Partial<PlaybackSettings>) => void;
   isAdmin?: boolean;
+  // 토스트 메시지
+  showToast?: (message: string, thumbnail?: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export const VideoPlayerComponent = ({
@@ -46,6 +48,7 @@ export const VideoPlayerComponent = ({
   playbackSettings,
   onPlaybackSettingsChange,
   isAdmin,
+  showToast,
 }: VideoPlayerComponentProps) => {
   const playerRef = useRef<YoutubeIframeRef>(null);
   const isLandscape = useOrientation();
@@ -274,6 +277,7 @@ export const VideoPlayerComponent = ({
         playbackSettings={playbackSettings}
         onPlaybackSettingsChange={onPlaybackSettingsChange}
         isAdmin={isAdmin}
+        showToast={showToast}
       />
     </View>
   );
