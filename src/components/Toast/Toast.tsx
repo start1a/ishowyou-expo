@@ -13,6 +13,7 @@ import { IconDone } from '@src/assets/icons';
 export interface ToastProps {
   visible: boolean;
   message: string;
+  subtitle?: string;
   thumbnail?: string;
   type?: 'success' | 'error' | 'info';
   duration?: number;
@@ -22,6 +23,7 @@ export interface ToastProps {
 export const Toast: React.FC<ToastProps> = ({
   visible,
   message,
+  subtitle,
   thumbnail,
   type = 'success',
   duration = 2500,
@@ -125,6 +127,11 @@ export const Toast: React.FC<ToastProps> = ({
           <Text style={styles.message} numberOfLines={2}>
             {message}
           </Text>
+          {subtitle && (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
         </View>
       </View>
     </Animated.View>
@@ -173,6 +180,12 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textPrimary,
     fontWeight: '500',
+  },
+  subtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    lineHeight: 14,
   },
 });
 

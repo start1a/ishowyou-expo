@@ -23,6 +23,9 @@ import IconSendSvg from './svg/icon-send.svg';
 import IconVideoListSvg from './svg/icon-video-list.svg';
 import IconUserSvg from './svg/icon-user.svg';
 import IconDoneSvg from './svg/icon-done.svg';
+import IconSearchSvg from './svg/icon-search.svg';
+import IconAddSvg from './svg/icon-add.svg';
+import IconWarningSvg from './svg/icon-warning.svg';
 
 interface IconProps extends SvgProps {
   width?: number;
@@ -95,4 +98,16 @@ export const IconUser = ({ width = sizes.iconMd, height = sizes.iconMd, color = 
 
 export const IconDone = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
   <IconDoneSvg width={width} height={height} stroke={color} {...props} />
+);
+
+export const IconSearch = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconSearchSvg width={width} height={height} stroke={color} {...props} />
+);
+
+export const IconAdd = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconAddSvg width={width} height={height} stroke={color} {...props} />
+);
+
+export const IconWarning = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconWarningSvg width={width} height={height} fill={color} {...props} />
 );

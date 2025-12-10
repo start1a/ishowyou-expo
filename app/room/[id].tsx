@@ -123,12 +123,18 @@ const RoomDetailScreen = () => {
   const [toastState, setToastState] = useState<{
     visible: boolean;
     message: string;
+    subtitle?: string;
     thumbnail?: string;
     type: 'success' | 'error' | 'info';
   }>({ visible: false, message: '', type: 'success' });
 
-  const showToast = (message: string, thumbnail?: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToastState({ visible: true, message, thumbnail, type });
+  const showToast = (
+    message: string,
+    thumbnail?: string,
+    type: 'success' | 'error' | 'info' = 'success',
+    subtitle?: string
+  ) => {
+    setToastState({ visible: true, message, subtitle, thumbnail, type });
   };
 
   const hideToast = () => {
@@ -365,6 +371,87 @@ const RoomDetailScreen = () => {
     }
   };
 
+  // YouTube 브라우저에서 여러 영상 선택 시 배치 처리
+  const handleYouTubeMultipleVideoSelect = async (
+    videos: { videoId: string; title: string; channelName: string; thumbnail: string }[]
+  ) => {
+    if (!id || !currentUserId) return;
+
+    const results = {
+      total: videos.length,
+      succeeded: [] as typeof videos,
+      failed: [] as typeof videos,
+      alreadyExists: [] as typeof videos,
+    };
+
+    // 각 영상 처리
+    for (const video of videos) {
+      // 이미 목록에 있는지 확인
+      const existingVideo = videoList.find(v => v.videoId === video.videoId);
+      if (existingVideo) {
+        results.alreadyExists.push(video);
+        continue;
+      }
+
+      // 방에 영상 추가
+      const newRoomVideo: Omit<RoomVideo, 'addedAt'> = {
+        videoId: video.videoId,
+        title: video.title,
+        thumbnail: video.thumbnail,
+        channelName: video.channelName,
+        addedBy: currentUserId,
+      };
+
+      const response = await RoomService.addVideoToRoom(id, newRoomVideo);
+      if (response.success && response.data) {
+        const newVideoData = roomVideoToVideoData(response.data);
+        setVideoList(prev => [...prev, newVideoData]);
+        results.succeeded.push(video);
+
+        // 첫 번째 성공한 영상을 선택
+        if (results.succeeded.length === 1) {
+          setSelectedVideo(newVideoData);
+        }
+      } else {
+        results.failed.push(video);
+      }
+    }
+
+    // 집계 결과에 따른 토스트 표시
+    const successCount = results.succeeded.length;
+    const failCount = results.failed.length;
+    const existCount = results.alreadyExists.length;
+
+    if (successCount === results.total) {
+      // 모두 성공
+      showToast(
+        `${successCount}개 영상이 추가되었습니다`,
+        results.succeeded[0]?.thumbnail,
+        'success'
+      );
+    } else if (successCount === 0) {
+      // 모두 실패
+      if (existCount > 0) {
+        showToast('이미 추가된 영상입니다', undefined, 'info');
+      } else {
+        showToast('영상을 추가할 수 없습니다', undefined, 'error');
+      }
+    } else {
+      // 부분 성공
+      const failedTitles = results.failed.map(v => v.title).join(', ');
+      const subtitle = failCount > 0
+        ? `${failCount}개 영상을 불러올 수 없습니다: ${failedTitles}`
+        : undefined;
+
+      showToast(
+        `${results.total}개 중 ${successCount}개 영상이 추가되었습니다`,
+        results.succeeded[0]?.thumbnail,
+        'info',
+        subtitle
+      );
+    }
+  };
+
   // 영상 삭제 처리
   const handleVideoDelete = async (video: VideoData) => {
     if (!id) return;
@@ -474,11 +561,13 @@ const RoomDetailScreen = () => {
             visible={isYouTubeBrowserVisible}
             onClose={() => setIsYouTubeBrowserVisible(false)}
             onSelectVideo={handleYouTubeVideoSelect}
+            onSelectMultipleVideos={handleYouTubeMultipleVideoSelect}
           />
           {/* 토스트 알림 (가로 모드) */}
           <Toast
             visible={toastState.visible}
             message={toastState.message}
+            subtitle={toastState.subtitle}
             thumbnail={toastState.thumbnail}
             type={toastState.type}
             onHide={hideToast}
@@ -642,12 +731,14 @@ const RoomDetailScreen = () => {
             visible={isYouTubeBrowserVisible}
             onClose={() => setIsYouTubeBrowserVisible(false)}
             onSelectVideo={handleYouTubeVideoSelect}
+            onSelectMultipleVideos={handleYouTubeMultipleVideoSelect}
           />
 
           {/* 토스트 알림 */}
           <Toast
             visible={toastState.visible}
             message={toastState.message}
+            subtitle={toastState.subtitle}
             thumbnail={toastState.thumbnail}
             type={toastState.type}
             onHide={hideToast}
