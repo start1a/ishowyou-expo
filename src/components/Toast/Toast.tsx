@@ -5,10 +5,12 @@ import {
   Text,
   View,
   Image,
+  TouchableOpacity,
+  PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, sizes, shadows } from '@src/theme';
-import { IconDone } from '@src/assets/icons';
+import { IconDone, IconX } from '@src/assets/icons';
 
 export interface ToastProps {
   visible: boolean;
@@ -32,6 +34,7 @@ export const Toast: React.FC<ToastProps> = ({
   const insets = useSafeAreaInsets();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-100)).current;
+  const gestureTranslateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
@@ -72,9 +75,55 @@ export const Toast: React.FC<ToastProps> = ({
         useNativeDriver: true,
       }),
     ]).start(() => {
+      gestureTranslateY.setValue(0);
       onHide?.();
     });
   };
+
+  // 스와이프 제스처 핸들러
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // 위로 스와이프할 때만 제스처 감지
+        return gestureState.dy < -5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // 위로만 움직이도록 제한
+        if (gestureState.dy < 0) {
+          gestureTranslateY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        // 50px 이상 위로 스와이프하면 토스트 숨김
+        if (gestureState.dy < -50) {
+          Animated.parallel([
+            Animated.timing(opacity, {
+              toValue: 0,
+              duration: 150,
+              useNativeDriver: true,
+            }),
+            Animated.timing(gestureTranslateY, {
+              toValue: -100,
+              duration: 150,
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            gestureTranslateY.setValue(0);
+            onHide?.();
+          });
+        } else {
+          // 스와이프가 충분하지 않으면 원위치
+          Animated.spring(gestureTranslateY, {
+            toValue: 0,
+            tension: 50,
+            friction: 7,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   if (!visible) return null;
 
@@ -96,7 +145,7 @@ export const Toast: React.FC<ToastProps> = ({
       case 'success':
         return <IconDone width={18} height={18} color={colors.textOnPrimary} />;
       case 'error':
-        return <Text style={styles.icon}>✕</Text>;
+        return <IconX width={18} height={18} color={colors.textOnPrimary} />;
       case 'info':
         return <Text style={styles.icon}>ℹ</Text>;
       default:
@@ -111,11 +160,19 @@ export const Toast: React.FC<ToastProps> = ({
         {
           top: insets.top + spacing.md,
           opacity,
-          transform: [{ translateY }],
+          transform: [
+            { translateY },
+            { translateY: gestureTranslateY }
+          ],
         },
       ]}
+      {...panResponder.panHandlers}
     >
-      <View style={[styles.toast, { borderLeftColor: getTypeColor() }]}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={hideToast}
+        style={[styles.toast, { borderLeftColor: getTypeColor() }]}
+      >
         {thumbnail ? (
           <Image source={{ uri: thumbnail }} style={styles.thumbnail} />
         ) : (
@@ -133,7 +190,7 @@ export const Toast: React.FC<ToastProps> = ({
             </Text>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 };
