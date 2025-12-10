@@ -70,11 +70,11 @@ export const VideoList = ({
             {/* 드래그 핸들 */}
             {canReorder && (
                 <TouchableOpacity
-                    onPressIn={Platform.OS === 'android' ? drag : undefined}
-                    onLongPress={Platform.OS === 'ios' ? drag : undefined}
-                    delayLongPress={Platform.OS === 'ios' ? 100 : undefined}
+                    onLongPress={drag}
+                    delayLongPress={Platform.OS === 'android' ? 0 : 100}
                     style={styles.dragHandle}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    activeOpacity={0.7}
                 >
                     <Text style={styles.dragHandleText}>☰</Text>
                 </TouchableOpacity>
@@ -129,8 +129,6 @@ export const VideoList = ({
                 onDragEnd={({ data }) => onVideoReorder?.(data)}
                 containerStyle={styles.videoList}
                 showsVerticalScrollIndicator={false}
-                activationDistance={Platform.OS === 'android' ? 20 : 10}
-                dragItemOverflow={true}
             />
             <DeleteConfirmModal
                 visible={deleteModalVisible}

@@ -470,6 +470,18 @@ const RoomDetailScreen = () => {
     }
   };
 
+  // 영상 순서 변경 처리
+  const handleVideoReorder = async (reorderedVideos: VideoData[]) => {
+    if (!id) return;
+
+    // 로컬 state 업데이트
+    setVideoList(reorderedVideos);
+
+    // TODO: 서버에 새로운 순서 저장
+    // const videoIds = reorderedVideos.map(v => v.videoId);
+    // await RoomService.updateVideoOrder(id, videoIds);
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -555,6 +567,8 @@ const RoomDetailScreen = () => {
             onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
             onVideoDelete={handleVideoDelete}
             canDelete={isAdmin}
+            canReorder={isAdmin}
+            onVideoReorder={handleVideoReorder}
           />
           {/* YouTube 브라우저 (가로 모드) */}
           <YouTubeBrowser
@@ -724,6 +738,8 @@ const RoomDetailScreen = () => {
             onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
             onVideoDelete={handleVideoDelete}
             canDelete={isAdmin}
+            canReorder={isAdmin}
+            onVideoReorder={handleVideoReorder}
           />
 
           {/* YouTube 브라우저 */}

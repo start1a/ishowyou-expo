@@ -9,14 +9,8 @@ import {
   Dimensions,
   TextInput,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
 import { colors, spacing, sizes, typography } from '@src/theme';
 import { scaleHeight } from '@src/DeviceScale';
 import { VideoList } from '@src/components/VideoList/VideoList';
@@ -33,11 +27,12 @@ interface VideoListBottomSheetProps {
   onAddVideoPress?: () => void;
   onVideoDelete?: (video: VideoData) => void;
   canDelete?: boolean;
+  canReorder?: boolean;
+  onVideoReorder?: (videos: VideoData[]) => void;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = SCREEN_HEIGHT * 0.6;
-const SWIPE_THRESHOLD = SHEET_HEIGHT * 0.5; // 시트 높이의 50% 드래그 시 닫힘
 
 export const VideoListBottomSheet = ({
   visible,
@@ -48,40 +43,12 @@ export const VideoListBottomSheet = ({
   onAddVideoPress,
   onVideoDelete,
   canDelete = false,
+  canReorder = false,
+  onVideoReorder,
 }: VideoListBottomSheetProps) => {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchVisible, setIsSearchVisible] = useState(false);
-
-  // 제스처 애니메이션
-  const translateY = useSharedValue(0);
-
-  // 드래그 제스처
-  const panGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      // 아래로만 드래그 가능
-      if (event.translationY > 0) {
-        translateY.value = event.translationY;
-      }
-    })
-    .onEnd((event) => {
-      // 아래 방향으로 임계값 이상 드래그했을 때만 닫기
-      if (event.translationY > 0 && event.translationY > SWIPE_THRESHOLD) {
-        runOnJS(onClose)();
-        translateY.value = 0; // 리셋
-      } else {
-        // 원래 위치로 스냅백
-        translateY.value = withSpring(0, {
-          damping: 20,
-          stiffness: 300,
-        });
-      }
-    });
-
-  // 애니메이션 스타일
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
 
   // 검색어로 영상 필터링
   const filteredVideos = useMemo(() => {
@@ -109,103 +76,105 @@ export const VideoListBottomSheet = ({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable onPress={(e) => e.stopPropagation()}>
-          <Animated.View
-            style={[styles.sheet, { paddingBottom: insets.bottom }, animatedStyle]}
-          >
-            <GestureDetector gesture={panGesture}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Pressable style={styles.overlay} onPress={onClose}>
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <View
+              style={[styles.sheet, { paddingBottom: insets.bottom }]}
+            >
               <View style={styles.header}>
                 <View style={styles.handle} />
                 <View style={styles.headerContent}>
-                <Text style={styles.title}>영상 목록</Text>
-                <View style={styles.iconButtons}>
-                {/* 검색 버튼 (10개 이상일 때만 표시) */}
-                {canSearch && (
-                  <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={() => {
-                      setIsSearchVisible(!isSearchVisible);
-                      if (isSearchVisible) {
-                        setSearchQuery('');
-                      }
-                    }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <IconSearch width={24} height={24} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                )}
-                {/* YouTube 추가 버튼 */}
-                {onAddVideoPress && (
-                  <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={() => {
-                      onClose();
-                      onAddVideoPress();
-                    }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <IconAdd width={24} height={24} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                )}
-                {/* 닫기 버튼 */}
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={onClose}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <CloseIcon size={24} color={colors.textSecondary} />
-                </TouchableOpacity>
+                  <Text style={styles.title}>영상 목록</Text>
+                  <View style={styles.iconButtons}>
+                    {/* 검색 버튼 (10개 이상일 때만 표시) */}
+                    {canSearch && (
+                      <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => {
+                          setIsSearchVisible(!isSearchVisible);
+                          if (isSearchVisible) {
+                            setSearchQuery('');
+                          }
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <IconSearch width={24} height={24} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    )}
+                    {/* YouTube 추가 버튼 */}
+                    {onAddVideoPress && (
+                      <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => {
+                          onClose();
+                          onAddVideoPress();
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <IconAdd width={24} height={24} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    )}
+                    {/* 닫기 버튼 */}
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={onClose}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <CloseIcon size={24} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* 검색바 (토글 방식) */}
+              {isSearchVisible && (
+                <View style={styles.searchContainer}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="영상 제목 또는 채널명 검색..."
+                    placeholderTextColor={colors.textMuted}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoFocus
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity
+                      style={styles.clearButton}
+                      onPress={() => setSearchQuery('')}
+                    >
+                      <CloseIcon size={16} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {/* 검색 결과 표시 */}
+              {isSearchVisible && searchQuery.length > 0 && (
+                <View style={styles.searchResultInfo}>
+                  <Text style={styles.searchResultText}>
+                    {filteredVideos.length}개의 검색 결과
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.listContainer}>
+                <VideoList
+                  videos={filteredVideos}
+                  onVideoSelect={handleVideoSelect}
+                  currentVideoId={currentVideoId}
+                  onVideoDelete={onVideoDelete}
+                  canDelete={canDelete}
+                  canReorder={canReorder && !isSearchVisible}
+                  onVideoReorder={onVideoReorder}
+                />
               </View>
             </View>
-          </View>
-          </GestureDetector>
-
-          {/* 검색바 (토글 방식) */}
-          {isSearchVisible && (
-            <View style={styles.searchContainer}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="영상 제목 또는 채널명 검색..."
-                placeholderTextColor={colors.textMuted}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoFocus
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  style={styles.clearButton}
-                  onPress={() => setSearchQuery('')}
-                >
-                  <CloseIcon size={16} color={colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
-          {/* 검색 결과 표시 */}
-          {isSearchVisible && searchQuery.length > 0 && (
-            <View style={styles.searchResultInfo}>
-              <Text style={styles.searchResultText}>
-                {filteredVideos.length}개의 검색 결과
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.listContainer}>
-            <VideoList
-              videos={filteredVideos}
-              onVideoSelect={handleVideoSelect}
-              currentVideoId={currentVideoId}
-              onVideoDelete={onVideoDelete}
-              canDelete={canDelete}
-            />
-          </View>
-        </Animated.View>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </GestureHandlerRootView>
     </Modal>
   );
 };
