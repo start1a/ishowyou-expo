@@ -36,6 +36,8 @@ interface VideoPlayerOverlayProps {
   isAdmin?: boolean;
   // 토스트 메시지
   showToast?: (message: string, thumbnail?: string, type?: 'success' | 'error' | 'info') => void;
+  // 드래그 상태
+  isSeeking?: boolean;
 }
 
 export const VideoPlayerOverlay = ({
@@ -59,6 +61,7 @@ export const VideoPlayerOverlay = ({
   onPlaybackSettingsChange,
   isAdmin = false,
   showToast,
+  isSeeking = false,
 }: VideoPlayerOverlayProps) => {
   const insets = useSafeAreaInsets();
   const isDragging = useRef(false);
@@ -206,14 +209,23 @@ export const VideoPlayerOverlay = ({
               onSeekForward={onSeekForward}
             />
           </View>
+        </>
+      )}
 
-          <View style={styles.bottomControlsContainer}>
-            <View style={styles.bottomControlsRow}>
-              <VideoTimeDisplay
-                currentTime={currentTime}
-                duration={duration}
-              />
+      {/* 하단 컨트롤 - 시간은 드래그 중에도 표시 */}
+      <View style={styles.bottomControlsContainer}>
+        <View style={styles.bottomControlsRow}>
+          {/* 시간 표시 - 컨트롤러 visible이거나 드래그 중일 때 */}
+          {(isControllerVisible || isSeeking) && (
+            <VideoTimeDisplay
+              currentTime={currentTime}
+              duration={duration}
+            />
+          )}
 
+          {/* 나머지 컨트롤 - 컨트롤러 visible일 때만 */}
+          {isControllerVisible && (
+            <>
               {/* 재생 모드 컨트롤 (방장만 표시) */}
               {isAdmin && playbackSettings && onPlaybackSettingsChange && (
                 <View style={styles.playbackControls}>
@@ -277,19 +289,19 @@ export const VideoPlayerOverlay = ({
               )}
 
               <FullScreenButton />
-            </View>
+            </>
+          )}
+        </View>
 
-            {isLandscape && (
-              <LandscapeProgressBar
-                currentTime={currentTime}
-                duration={duration}
-                playHeadWidth={playHeadWidth}
-                style={styles.progressBarLandscape}
-              />
-            )}
-          </View>
-        </>
-      )}
+        {isControllerVisible && isLandscape && (
+          <LandscapeProgressBar
+            currentTime={currentTime}
+            duration={duration}
+            playHeadWidth={playHeadWidth}
+            style={styles.progressBarLandscape}
+          />
+        )}
+      </View>
     </View>
   );
 };

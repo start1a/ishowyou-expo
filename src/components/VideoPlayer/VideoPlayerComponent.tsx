@@ -278,6 +278,7 @@ export const VideoPlayerComponent = ({
         onPlaybackSettingsChange={onPlaybackSettingsChange}
         isAdmin={isAdmin}
         showToast={showToast}
+        isSeeking={isSeeking}
       />
     </View>
   );

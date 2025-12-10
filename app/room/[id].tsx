@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, StatusBar } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Drawer } from 'react-native-drawer-layout';
 import { useAuth } from '@src/contexts/AuthContext';
@@ -41,6 +41,7 @@ const RoomDetailScreen = () => {
 
   const { id, sharedVideoId } = useLocalSearchParams<{ id: string; sharedVideoId?: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { user } = useAuth();
   const { room, loading, error, refetch } = useRoom(id || '');
 
@@ -148,6 +149,13 @@ const RoomDetailScreen = () => {
   const hideToast = () => {
     setToastState(prev => ({ ...prev, visible: false }));
   };
+
+  // 백 스와이프 제스처 비활성화 (유저 실수 방지)
+  useEffect(() => {
+    navigation.setOptions({
+      gestureEnabled: false,
+    });
+  }, [navigation]);
 
   // Firebase에서 영상 목록 불러오기
   useEffect(() => {
@@ -783,7 +791,7 @@ const RoomDetailScreen = () => {
         <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity
             style={styles.headerButton}
-            onPress={() => router.back()}
+            onPress={handleLeaveRoom}
           >
             <IconBack width={24} height={24} color={colors.textPrimary} />
           </TouchableOpacity>
