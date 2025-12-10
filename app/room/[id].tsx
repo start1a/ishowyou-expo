@@ -24,6 +24,7 @@ import { VideoUtils } from '@src/utils/VideoUtils';
 import { colors, spacing, sizes, typography } from '@src/theme';
 import { IconBack, IconExitRoom, IconUser } from '@src/assets/icons';
 import { YouTubeBrowser } from '@src/components/YouTubeBrowser';
+import { Toast } from '@src/components/Toast';
 
 // RoomVideo를 VideoData로 변환하는 헬퍼 함수
 const roomVideoToVideoData = (roomVideo: RoomVideo): VideoData => ({
@@ -118,6 +119,22 @@ const RoomDetailScreen = () => {
   // YouTube 브라우저 상태
   const [isYouTubeBrowserVisible, setIsYouTubeBrowserVisible] = useState(false);
 
+  // 토스트 알림 상태
+  const [toastState, setToastState] = useState<{
+    visible: boolean;
+    message: string;
+    thumbnail?: string;
+    type: 'success' | 'error' | 'info';
+  }>({ visible: false, message: '', type: 'success' });
+
+  const showToast = (message: string, thumbnail?: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToastState({ visible: true, message, thumbnail, type });
+  };
+
+  const hideToast = () => {
+    setToastState(prev => ({ ...prev, visible: false }));
+  };
+
   // Firebase에서 영상 목록 불러오기
   useEffect(() => {
     const loadVideos = async () => {
@@ -174,7 +191,7 @@ const RoomDetailScreen = () => {
         const newVideoData = roomVideoToVideoData(response.data);
         setVideoList(prev => [...prev, newVideoData]);
         setSelectedVideo(newVideoData);
-        Alert.alert('영상 추가', `"${newRoomVideo.title}" 영상이 추가되었습니다.`);
+        showToast(`"${newRoomVideo.title}" 추가됨`, newRoomVideo.thumbnail, 'success');
       } else if (response.error === '이미 추가된 영상입니다') {
         // 이미 있는 영상이면 해당 영상 선택
         const video = videoList.find(v => v.videoId === sharedVideoId);
@@ -324,7 +341,7 @@ const RoomDetailScreen = () => {
     const existingVideo = videoList.find(v => v.videoId === video.videoId);
     if (existingVideo) {
       setSelectedVideo(existingVideo);
-      Alert.alert('알림', '이미 추가된 영상입니다. 해당 영상을 선택합니다.');
+      showToast('이미 추가된 영상입니다', existingVideo.thumbnail, 'info');
       return;
     }
 
@@ -342,9 +359,27 @@ const RoomDetailScreen = () => {
       const newVideoData = roomVideoToVideoData(response.data);
       setVideoList(prev => [...prev, newVideoData]);
       setSelectedVideo(newVideoData);
-      Alert.alert('영상 추가 완료', `"${video.title}" 영상이 추가되었습니다.`);
+      showToast(`"${video.title}" 추가됨`, video.thumbnail, 'success');
     } else {
-      Alert.alert('오류', response.error || '영상 추가에 실패했습니다.');
+      showToast(response.error || '영상 추가 실패', undefined, 'error');
+    }
+  };
+
+  // 영상 삭제 처리
+  const handleVideoDelete = async (video: VideoData) => {
+    if (!id) return;
+
+    const response = await RoomService.removeVideoFromRoom(id, video.videoId);
+    if (response.success) {
+      setVideoList(prev => prev.filter(v => v.videoId !== video.videoId));
+      // 삭제된 영상이 현재 재생 중인 영상이면 다른 영상 선택
+      if (selectedVideo?.videoId === video.videoId) {
+        const remainingVideos = videoList.filter(v => v.videoId !== video.videoId);
+        setSelectedVideo(remainingVideos.length > 0 ? remainingVideos[0] : null);
+      }
+      showToast(`"${video.title}" 삭제됨`, undefined, 'success');
+    } else {
+      showToast(response.error || '영상 삭제 실패', undefined, 'error');
     }
   };
 
@@ -431,12 +466,22 @@ const RoomDetailScreen = () => {
             onVideoSelect={setSelectedVideo}
             currentVideoId={selectedVideo?.videoId || ''}
             onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
+            onVideoDelete={handleVideoDelete}
+            canDelete={isAdmin}
           />
           {/* YouTube 브라우저 (가로 모드) */}
           <YouTubeBrowser
             visible={isYouTubeBrowserVisible}
             onClose={() => setIsYouTubeBrowserVisible(false)}
             onSelectVideo={handleYouTubeVideoSelect}
+          />
+          {/* 토스트 알림 (가로 모드) */}
+          <Toast
+            visible={toastState.visible}
+            message={toastState.message}
+            thumbnail={toastState.thumbnail}
+            type={toastState.type}
+            onHide={hideToast}
           />
         </KeyboardAvoidingView>
       </View>
@@ -588,6 +633,8 @@ const RoomDetailScreen = () => {
             onVideoSelect={setSelectedVideo}
             currentVideoId={selectedVideo?.videoId || ''}
             onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
+            onVideoDelete={handleVideoDelete}
+            canDelete={isAdmin}
           />
 
           {/* YouTube 브라우저 */}
@@ -595,6 +642,15 @@ const RoomDetailScreen = () => {
             visible={isYouTubeBrowserVisible}
             onClose={() => setIsYouTubeBrowserVisible(false)}
             onSelectVideo={handleYouTubeVideoSelect}
+          />
+
+          {/* 토스트 알림 */}
+          <Toast
+            visible={toastState.visible}
+            message={toastState.message}
+            thumbnail={toastState.thumbnail}
+            type={toastState.type}
+            onHide={hideToast}
           />
 
           {selectedVideo && (

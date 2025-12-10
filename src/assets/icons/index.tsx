@@ -22,6 +22,7 @@ import IconChatSvg from './svg/icon-chat.svg';
 import IconSendSvg from './svg/icon-send.svg';
 import IconVideoListSvg from './svg/icon-video-list.svg';
 import IconUserSvg from './svg/icon-user.svg';
+import IconDoneSvg from './svg/icon-done.svg';
 
 interface IconProps extends SvgProps {
   width?: number;
@@ -90,4 +91,8 @@ export const IconVideoList = ({ width = sizes.iconMd, height = sizes.iconMd, col
 
 export const IconUser = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
   <IconUserSvg width={width} height={height} fill={color} {...props} />
+);
+
+export const IconDone = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
+  <IconDoneSvg width={width} height={height} stroke={color} {...props} />
 );
