@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, signInWithCredential, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@src/config/firebase';
+import { ref, get, set, update, serverTimestamp } from 'firebase/database';
+import { auth, database } from '@src/config/firebase';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -38,7 +39,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
   const [isFirstLaunch, setIsFirstLaunch] = useState(true);
 
-  // 세션 저장
+  // 세션 저장 (로컬 + Firebase)
   const saveUserSession = async (user: User) => {
     try {
       const userData = {
@@ -50,6 +51,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       };
       await AsyncStorage.setItem(STORAGE_KEYS.USER_TOKEN, JSON.stringify(userData));
       await AsyncStorage.setItem(STORAGE_KEYS.LAST_LOGIN_TIME, new Date().toISOString());
+
+      // Firebase Realtime Database에 유저 프로필 저장/업데이트
+      const userRef = ref(database, `users/${user.uid}`);
+      const snapshot = await get(userRef);
+
+      if (snapshot.exists()) {
+        // 기존 유저: 로그인 시간만 업데이트
+        await update(userRef, {
+          displayName: user.displayName || '익명',
+          photoURL: user.photoURL || null,
+          lastLoginAt: serverTimestamp(),
+        });
+      } else {
+        // 신규 유저: 전체 프로필 생성
+        await set(userRef, {
+          userId: user.uid,
+          displayName: user.displayName || '익명',
+          email: user.email || '',
+          photoURL: user.photoURL || null,
+          createdAt: serverTimestamp(),
+          lastLoginAt: serverTimestamp(),
+        });
+      }
     } catch (error) {
       console.error('세션 저장 오류:', error);
     }
@@ -60,7 +84,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER_TOKEN);
       const isFirst = await AsyncStorage.getItem(STORAGE_KEYS.IS_FIRST_LAUNCH);
-      
+
       if (isFirst === null) {
         await AsyncStorage.setItem(STORAGE_KEYS.IS_FIRST_LAUNCH, 'false');
         setIsFirstLaunch(true);
@@ -89,152 +113,73 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  // Auth 초기화 및 세션 복원
   useEffect(() => {
     let mounted = true;
+    let timeoutId: any;
     let authInitialized = false;
-    let timeoutId: ReturnType<typeof setTimeout>;
-    
-    // Google Sign-In 설정
+
     const configureGoogleSignIn = async () => {
-      try {
-        const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-        
-        if (webClientId) {
-          const config = {
-            webClientId: webClientId,
-            offlineAccess: true,
-            forceCodeForRefreshToken: true,
-          };
-          
-          GoogleSignin.configure(config);
-          
-          // 설정 검증
-          await GoogleSignin.hasPlayServices();
-        } else {
-          console.error('Google Web Client ID가 설정되지 않음');
-        }
-      } catch (error) {
-        console.error('Google Sign-In 설정 오류:', error);
-      }
+      GoogleSignin.configure({
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+        offlineAccess: true,
+      });
     };
 
-    // Auth 초기화 및 세션 복원
     const initAuth = async () => {
       try {
         await configureGoogleSignIn();
-        
+
         // 저장된 세션 확인
         const savedSession = await loadUserSession();
-        
-        // Google Sign-In 사용자 상태 확인
-        try {
-          const googleUser = await GoogleSignin.getCurrentUser();
-          
-          // 다양한 구조 시도 (타입 캐스팅)
-          const googleUserAny = googleUser as any;
-          const idToken = googleUserAny?.data?.idToken || googleUserAny?.idToken;
-          
-          if (idToken) {
-            const credential = GoogleAuthProvider.credential(idToken);
-            try {
+
+        // 저장된 세션이 있다면 먼저 복원 시도
+        if (savedSession) {
+          try {
+            console.log('⏳ 저장된 세션으로 자동 복원 시도...');
+            const googleUser = await GoogleSignin.signInSilently();
+
+            const googleUserAny = googleUser as any;
+            const idToken = googleUserAny?.data?.idToken || googleUserAny?.idToken;
+
+            if (idToken) {
+              console.log('🔄 Google 자동 로그인 성공, Firebase 연동...');
+              const credential = GoogleAuthProvider.credential(idToken);
               await signInWithCredential(auth, credential);
-            } catch (silentSignInError) {
-              // 토큰 갱신 시도
-              try {
-                const refreshedUser = await GoogleSignin.signInSilently();
-                
-                const refreshedUserAny = refreshedUser as any;
-                const newIdToken = refreshedUserAny?.data?.idToken || refreshedUserAny?.idToken;
-                if (newIdToken) {
-                  const newCredential = GoogleAuthProvider.credential(newIdToken);
-                  await signInWithCredential(auth, newCredential);
-                }
-              } catch (refreshError) {
-                console.log('토큰 갱신 실패:', refreshError);
-              }
+              // 이 시점에서 onAuthStateChanged가 트리거되어 상태를 업데이트할 것임
             }
+          } catch (restoreError) {
+            console.log('자동 복원 실패 (만료됨 또는 취소됨):', restoreError);
+            // 복원 실패 시 세션 삭제
+            await clearUserSession();
           }
-        } catch (googleError) {
-          console.log('Google Sign-In 상태 확인 오류:', googleError);
         }
-        
-        // Firebase Auth 상태 리스너 등록 (즉시)
+
+        // Firebase Auth 상태 리스너 등록
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (!mounted) return;
-          
+
           console.log('Firebase Auth 상태 변경:', firebaseUser?.email || 'null');
-          
-          // 첫 번째 상태 변경 시 초기화 완료 표시
-          if (!authInitialized) {
-            authInitialized = true;
-            console.log('Firebase Auth 초기화 완료');
-            
-            // 타임아웃 클리어
-            if (timeoutId) {
-              clearTimeout(timeoutId);
-            }
-          }
-          
+
           if (firebaseUser) {
-            // Firebase에서 로그인된 사용자가 있으면 세션 저장
+            // 로그인 상태
             await saveUserSession(firebaseUser);
             setUser(firebaseUser);
-            console.log('🔐 사용자 로그인 상태 설정:', firebaseUser.email);
           } else {
-            // Firebase에서 로그아웃되었으면
-            console.log('🔓 사용자 로그아웃 상태 설정');
-            
-            // 저장된 세션이 있다면 Google Sign-In으로 자동 복원 시도
-            if (savedSession && !authInitialized) {
-              console.log('⏳ 저장된 세션으로 자동 복원 시도...');
-              try {
-                // Google Sign-In으로 자동 로그인 시도
-                const refreshedUser = await GoogleSignin.signInSilently();
-                console.log('🔄 자동 로그인 성공:', refreshedUser);
-                
-                const refreshedUserAny = refreshedUser as any;
-                const newIdToken = refreshedUserAny?.data?.idToken || refreshedUserAny?.idToken;
-                if (newIdToken) {
-                  const newCredential = GoogleAuthProvider.credential(newIdToken);
-                  await signInWithCredential(auth, newCredential);
-                  console.log('자동 세션 복원 성공');
-                  return; // 성공하면 여기서 종료
-                }
-              } catch (autoLoginError) {
-                console.log('자동 세션 복원 실패:', autoLoginError);
-              }
-            }
-            
-            // 로컬 세션 삭제
-            await clearUserSession();
+            // 로그아웃 상태
+            // 이미 위에서 복원을 시도했으므로, 여기서 다시 복원하지 않음
             setUser(null);
           }
-          
-          // 초기화가 완료된 후에만 로딩 상태 해제
-          if (authInitialized) {
-            setLoading(false);
-          }
+
+          setLoading(false);
+          authInitialized = true;
+          if (timeoutId) clearTimeout(timeoutId);
         });
 
-        // 현재 사용자 상태 즉시 확인 (네이티브 환경에서 유용)
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          console.log('🔍 현재 Firebase 사용자 발견:', currentUser.email);
-          if (mounted) {
-            await saveUserSession(currentUser);
-            setUser(currentUser);
-            authInitialized = true;
-            setLoading(false);
-          }
-        } else {
-          console.log('🔍 현재 Firebase 사용자 없음');
-        }
-
-        // 네이티브 환경에서 Firebase Auth 초기화 타임아웃 설정 (7초)
+        // 타임아웃 예외 처리 (네트워크 지연 등)
         timeoutId = setTimeout(() => {
           if (!authInitialized && mounted) {
-            console.log('Firebase Auth 초기화 타임아웃 - 강제 초기화');
-            authInitialized = true;
+            console.log('Auth 초기화 타임아웃 - 강제 로딩 해제');
             setLoading(false);
           }
         }, 7000);
@@ -242,21 +187,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return unsubscribe;
       } catch (error) {
         console.error('Auth 초기화 오류:', error);
-        if (mounted) {
-          setLoading(false);
-        }
-        return () => {};
+        if (mounted) setLoading(false);
+        return () => { };
       }
     };
 
     const cleanup = initAuth();
-    
+
     return () => {
       mounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      cleanup.then(unsubscribe => unsubscribe()).catch(console.error);
+      if (timeoutId) clearTimeout(timeoutId);
+      cleanup.then(unsubscribe => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      });
     };
   }, []);
 
@@ -265,14 +208,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       // Play Services 확인
       await GoogleSignin.hasPlayServices();
-      
+
       // Google 로그인 시도
       const userInfo = await GoogleSignin.signIn();
-      
+
       // ID Token 확인
       if (userInfo.data?.idToken) {
         const { idToken } = userInfo.data;
-        
+
         // Firebase Auth에 Google 토큰으로 로그인
         const credential = GoogleAuthProvider.credential(idToken);
         await signInWithCredential(auth, credential);
@@ -281,7 +224,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     } catch (error: any) {
       console.error('Google 로그인 에러:', error);
-      
+
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         console.log('  - 사용자가 로그인을 취소했습니다');
       } else if (error.code === statusCodes.IN_PROGRESS) {
@@ -302,13 +245,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       // Google Sign-In에서도 로그아웃
       await GoogleSignin.signOut();
-      
+
       // Firebase 로그아웃
       await signOut(auth);
-      
+
       // 로컬 세션 삭제
       await clearUserSession();
-      
+
     } catch (error) {
       console.error('Logout error:', error);
       throw error;

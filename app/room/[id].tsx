@@ -1,81 +1,239 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform, SafeAreaView, StatusBar, FlatList } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, FlatList, StatusBar } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Drawer } from 'react-native-drawer-layout';
 import { useAuth } from '@src/contexts/AuthContext';
 import { useRoom } from '@src/hooks/useRoomApi';
 import { useMember } from '@src/hooks/useMemberApi';
 import { useRoomSession } from '@src/hooks/useRoomSession';
+import { useVideoSync } from '@src/hooks/useVideoSync';
+import { useMessages } from '@src/hooks/useMessages';
 import { ItemRoomMember } from '@src/components/Member';
 import { VideoPlayerComponent } from '@src/components/VideoPlayer';
-import { VideoList } from '@src/components/VideoList/VideoList';
 import { PortraitProgressBar } from '@src/components/ProgressBar';
+import { ChatInput, ChatList, VideoListBottomSheet } from '@src/components/Chat';
 import { RoomService } from '@src/api';
-import { useOrientation } from '@src/hooks/useOrientation';
 import { useOrientationContext } from '@src/contexts/OrientationContext';
 import { usePlayerSize } from '@src/hooks/usePlayerSize';
-import { scaleWidth } from '@src/DeviceScale';
-import { VIDEO_LIST } from '@src/constants/videoData';
+import { scaleHeight, scaleWidth } from '@src/DeviceScale';
+import { VideoData } from '@src/types/VideoData';
+import { RoomVideo } from '@src/api/types';
+import { VideoUtils } from '@src/utils/VideoUtils';
+import { colors, spacing, sizes, typography } from '@src/theme';
+import { IconBack, IconExitRoom, IconUser } from '@src/assets/icons';
+import { YouTubeBrowser } from '@src/components/YouTubeBrowser';
+import { Toast } from '@src/components/Toast';
+
+// RoomVideo를 VideoData로 변환하는 헬퍼 함수
+const roomVideoToVideoData = (roomVideo: RoomVideo): VideoData => ({
+  id: roomVideo.videoId,
+  title: roomVideo.title,
+  videoId: roomVideo.videoId,
+  thumbnail: roomVideo.thumbnail,
+  duration: roomVideo.duration || 0,
+  channelName: roomVideo.channelName || 'YouTube',
+  uploadDate: new Date(roomVideo.addedAt).toISOString().split('T')[0],
+});
 
 const RoomDetailScreen = () => {
-  
-  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const { id, sharedVideoId } = useLocalSearchParams<{ id: string; sharedVideoId?: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const { room, loading, error, refetch } = useRoom(id || '');
-  const { updateOnlineStatus } = useMember();
-  
+
   // 실제 로그인된 사용자 ID 사용
   const currentUserId = user?.uid;
-  
-  // 세션 관리 훅
-  const { sessionMembers, isConnected, joinSession, leaveSession } = useRoomSession(id || '', currentUserId);
+
+  // 방 멤버 관리 훅
+  const { members, isConnected, joinRoom, leaveRoom } = useRoomSession(id || '', currentUserId);
   const { isLandscape } = useOrientationContext();
+
+  // 채팅 메시지 훅
+  const { messages, isLoading: messagesLoading, sendMessage } = useMessages(
+    id || '',
+    currentUserId,
+    user ? { displayName: user.displayName || '익명', photoURL: user.photoURL } : undefined
+  );
   const insets = useSafeAreaInsets();
   const { playerHeight } = usePlayerSize();
-    
+
   const [currentUserRole, setCurrentUserRole] = useState<'owner' | 'admin' | 'member'>('member');
-  
+
+  // 동적 영상 목록 상태
+  const [videoList, setVideoList] = useState<VideoData[]>([]);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(true);
+
   // 비디오 플레이어 상태
-  const [selectedVideo, setSelectedVideo] = useState(VIDEO_LIST[0]);
+  const [selectedVideo, setSelectedVideo] = useState<VideoData | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  
-  // 탭 상태 (비디오 목록 또는 방 정보)
-  const [activeTab, setActiveTab] = useState<'videos' | 'room'>('videos');
-  
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // 방장 여부 확인
+  const isOwner = currentUserRole === 'owner';
+
+  // 동기화 훅
+  const {
+    isSyncControlEnabled,
+    toggleSyncControl,
+    isSyncFollowEnabled,
+    toggleSyncFollow,
+    syncState,
+    updateSyncImmediately,
+  } = useVideoSync({
+    roomId: id || '',
+    isOwner,
+    currentTime,
+    isPlaying,
+    videoId: selectedVideo?.videoId || '',
+    onSyncVideoChange: (videoId) => {
+      // 동기화된 영상으로 변경
+      const video = videoList.find(v => v.videoId === videoId);
+      if (video) {
+        setSelectedVideo(video);
+      }
+    },
+  });
+
+  // 동기화 토글 핸들러 (방장/멤버에 따라 다른 함수 호출)
+  const handleSyncToggle = useCallback(() => {
+    if (isOwner) {
+      toggleSyncControl();
+    } else {
+      toggleSyncFollow();
+    }
+  }, [isOwner, toggleSyncControl, toggleSyncFollow]);
+
+  // 현재 동기화 활성화 상태
+  const isSyncEnabled = isOwner ? isSyncControlEnabled : isSyncFollowEnabled;
+
+  // 영상 목록 바텀시트 상태
+  const [isVideoListVisible, setIsVideoListVisible] = useState(false);
+
+  // 드로어 상태
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // YouTube 브라우저 상태
+  const [isYouTubeBrowserVisible, setIsYouTubeBrowserVisible] = useState(false);
+
+  // 토스트 알림 상태
+  const [toastState, setToastState] = useState<{
+    visible: boolean;
+    message: string;
+    thumbnail?: string;
+    type: 'success' | 'error' | 'info';
+  }>({ visible: false, message: '', type: 'success' });
+
+  const showToast = (message: string, thumbnail?: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToastState({ visible: true, message, thumbnail, type });
+  };
+
+  const hideToast = () => {
+    setToastState(prev => ({ ...prev, visible: false }));
+  };
+
+  // Firebase에서 영상 목록 불러오기
+  useEffect(() => {
+    const loadVideos = async () => {
+      if (!id) return;
+
+      setIsLoadingVideos(true);
+      try {
+        const response = await RoomService.getVideosFromRoom(id);
+        if (response.success && response.data) {
+          const videos = response.data.map(roomVideoToVideoData);
+          setVideoList(videos);
+
+          // 첫 번째 영상을 기본 선택 (이미 선택된 영상이 없을 때만)
+          if (!selectedVideo && videos.length > 0) {
+            setSelectedVideo(videos[0]);
+          }
+        }
+      } catch (error) {
+        console.error('영상 목록 불러오기 오류:', error);
+      } finally {
+        setIsLoadingVideos(false);
+      }
+    };
+
+    loadVideos();
+  }, [id]);
+
+  // 공유된 비디오 처리 및 방에 추가
+  useEffect(() => {
+    const handleSharedVideo = async () => {
+      if (!sharedVideoId || !id || !currentUserId) return;
+
+      // 기존 영상 목록에서 찾기
+      const existingVideo = videoList.find(v => v.videoId === sharedVideoId);
+      if (existingVideo) {
+        setSelectedVideo(existingVideo);
+        return;
+      }
+
+      // YouTube oEmbed API로 영상 정보 가져오기 (무료)
+      const videoInfo = await VideoUtils.fetchVideoInfo(sharedVideoId);
+
+      // 공유된 비디오를 방에 추가
+      const newRoomVideo: Omit<RoomVideo, 'addedAt'> = {
+        videoId: sharedVideoId,
+        title: videoInfo?.title || '공유된 영상',
+        thumbnail: videoInfo?.thumbnail || VideoUtils.getThumbnailUrl(sharedVideoId, 'high'),
+        channelName: videoInfo?.channelName || 'YouTube',
+        addedBy: currentUserId,
+      };
+
+      const response = await RoomService.addVideoToRoom(id, newRoomVideo);
+      if (response.success && response.data) {
+        const newVideoData = roomVideoToVideoData(response.data);
+        setVideoList(prev => [...prev, newVideoData]);
+        setSelectedVideo(newVideoData);
+        showToast(`"${newRoomVideo.title}" 추가됨`, newRoomVideo.thumbnail, 'success');
+      } else if (response.error === '이미 추가된 영상입니다') {
+        // 이미 있는 영상이면 해당 영상 선택
+        const video = videoList.find(v => v.videoId === sharedVideoId);
+        if (video) {
+          setSelectedVideo(video);
+        }
+      }
+    };
+
+    handleSharedVideo();
+  }, [sharedVideoId, id, currentUserId, videoList]);
+
   const WIDTH_PLAY_HEAD = scaleWidth(15);
 
-  const { updateMemberRole, removeMember, loading: memberLoading } = useMember();
+  const { updateMemberRole, removeMember } = useMember();
 
   const handleRoleChange = async (member: any) => {
-    if (!isAdmin || member.id === currentUserId) return;
+    if (!isAdmin || member.userId === currentUserId) return;
 
     const newRole = member.role === 'admin' ? 'member' : 'admin';
-    const result = await updateMemberRole(id || '', member.id, newRole);
-    
+    const result = await updateMemberRole(id || '', member.userId, newRole);
+
     if (result) {
-      Alert.alert('성공', `${member.nickname}님의 권한이 변경되었습니다.`);
-      refetch();
+      Alert.alert('성공', `${member.displayName}님의 권한이 변경되었습니다.`);
     }
   };
 
   const handleRemoveMember = async (member: any) => {
-    if (!isAdmin || member.id === currentUserId || member.role === 'owner') return;
+    if (!isAdmin || member.userId === currentUserId || member.role === 'owner') return;
 
     Alert.alert(
       '멤버 추방',
-      `${member.nickname}님을 방에서 추방하시겠습니까?`,
+      `${member.displayName}님을 방에서 추방하시겠습니까?`,
       [
         { text: '취소', style: 'cancel' },
         {
           text: '추방',
           style: 'destructive',
           onPress: async () => {
-            const success = await removeMember(id || '', member.id);
+            const success = await removeMember(id || '', member.userId);
             if (success) {
-              Alert.alert('성공', `${member.nickname}님이 방에서 추방되었습니다.`);
-              refetch();
+              Alert.alert('성공', `${member.displayName}님이 방에서 추방되었습니다.`);
             }
           },
         },
@@ -85,26 +243,35 @@ const RoomDetailScreen = () => {
 
   useEffect(() => {
     if (room && !isConnected && currentUserId) {
-      const currentMember = room.members.find(m => m.id === currentUserId);
-      if (currentMember) {
-        setCurrentUserRole(currentMember.role);
-        
-        // 세션에 참여
-        joinSession({
-          nickname: currentMember.nickname || user?.displayName || '익명',
-          avatar: currentMember.avatar || user?.photoURL,
-          role: currentMember.role
-        }).catch(error => {
-          console.error('세션 참여 실패:', error);
-        });
+      // 역할 결정: 방장 > 기존 멤버 역할 > 일반 멤버
+      let role: 'owner' | 'admin' | 'member' = 'member';
+
+      if (room.ownerId === currentUserId) {
+        role = 'owner';
+      } else {
+        const currentMember = room.members?.[currentUserId];
+        if (currentMember) {
+          role = currentMember.role;
+        }
       }
+
+      setCurrentUserRole(role);
+
+      // 방에 참여
+      joinRoom({
+        displayName: user?.displayName || '익명',
+        photoURL: user?.photoURL || undefined,
+        role
+      }).catch((error: Error) => {
+        console.error('방 참여 실패:', error);
+      });
     }
 
-    // 컴포넌트 언마운트 시 세션 정리
+    // 컴포넌트 언마운트 시 정리
     return () => {
       if (isConnected) {
-        leaveSession().catch(error => {
-          console.error('세션 정리 실패:', error);
+        leaveRoom().catch((error: Error) => {
+          console.error('방 정리 실패:', error);
         });
       }
     };
@@ -121,22 +288,11 @@ const RoomDetailScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // 세션에서 먼저 나가기
-              await leaveSession();
-              
-              // 방에서 나가기
-              if (currentUserId) {
-                const response = await RoomService.leaveRoom(id || '', currentUserId);
-                if (response.success) {
-                  router.back();
-                } else {
-                  Alert.alert('오류', response.error || '방 나가기에 실패했습니다.');
-                }
-              } else {
-                Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
-              }
+              // 방에서 나가기 (useRoomSession이 Firebase에서 멤버 제거)
+              await leaveRoom();
+              router.back();
             } catch (error) {
-              Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+              Alert.alert('오류', '방 나가기에 실패했습니다.');
             }
           },
         },
@@ -172,10 +328,65 @@ const RoomDetailScreen = () => {
     );
   };
 
+  // YouTube 브라우저에서 영상 선택 시 처리
+  const handleYouTubeVideoSelect = async (video: {
+    videoId: string;
+    title: string;
+    channelName: string;
+    thumbnail: string;
+  }) => {
+    if (!id || !currentUserId) return;
+
+    // 이미 목록에 있는지 확인
+    const existingVideo = videoList.find(v => v.videoId === video.videoId);
+    if (existingVideo) {
+      setSelectedVideo(existingVideo);
+      showToast('이미 추가된 영상입니다', existingVideo.thumbnail, 'info');
+      return;
+    }
+
+    // 방에 영상 추가
+    const newRoomVideo: Omit<RoomVideo, 'addedAt'> = {
+      videoId: video.videoId,
+      title: video.title,
+      thumbnail: video.thumbnail,
+      channelName: video.channelName,
+      addedBy: currentUserId,
+    };
+
+    const response = await RoomService.addVideoToRoom(id, newRoomVideo);
+    if (response.success && response.data) {
+      const newVideoData = roomVideoToVideoData(response.data);
+      setVideoList(prev => [...prev, newVideoData]);
+      setSelectedVideo(newVideoData);
+      showToast(`"${video.title}" 추가됨`, video.thumbnail, 'success');
+    } else {
+      showToast(response.error || '영상 추가 실패', undefined, 'error');
+    }
+  };
+
+  // 영상 삭제 처리
+  const handleVideoDelete = async (video: VideoData) => {
+    if (!id) return;
+
+    const response = await RoomService.removeVideoFromRoom(id, video.videoId);
+    if (response.success) {
+      setVideoList(prev => prev.filter(v => v.videoId !== video.videoId));
+      // 삭제된 영상이 현재 재생 중인 영상이면 다른 영상 선택
+      if (selectedVideo?.videoId === video.videoId) {
+        const remainingVideos = videoList.filter(v => v.videoId !== video.videoId);
+        setSelectedVideo(remainingVideos.length > 0 ? remainingVideos[0] : null);
+      }
+      showToast(`"${video.title}" 삭제됨`, undefined, 'success');
+    } else {
+      showToast(response.error || '영상 삭제 실패', undefined, 'error');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <Text>방 정보를 불러오는 중...</Text>
+        <Text style={styles.loadingText}>방 정보를 불러오는 중...</Text>
       </View>
     );
   }
@@ -194,7 +405,7 @@ const RoomDetailScreen = () => {
   if (!room) {
     return (
       <View style={styles.centerContainer}>
-        <Text>방을 찾을 수 없습니다.</Text>
+        <Text style={styles.loadingText}>방을 찾을 수 없습니다.</Text>
       </View>
     );
   }
@@ -204,288 +415,463 @@ const RoomDetailScreen = () => {
   // 풀스크린 모드일 때는 비디오 플레이어만 표시
   if (isLandscape) {
     return (
-      <View style={{ flex: 1 }}>
-        <StatusBar backgroundColor="#000000" barStyle="light-content" />
-        <View style={{ width: insets.left, position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: 'black' }} />
-        
-        <SafeAreaView style={{
-          flex: 1,
-          flexDirection: 'row',
-          justifyContent: 'center',
-        }}>
+      <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center' }}>
+        <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
+
+        {selectedVideo ? (
           <VideoPlayerComponent
             videoId={selectedVideo.videoId}
             onTimeUpdate={(current, total) => {
               setCurrentTime(current);
               setDuration(total);
             }}
+            isPlaying={isPlaying}
+            onPlayStateChange={setIsPlaying}
+            isSyncEnabled={isSyncEnabled}
+            isOwner={isOwner}
+            onSyncToggle={handleSyncToggle}
+            syncTime={syncState?.currentTime}
+            syncIsPlaying={syncState?.isPlaying}
+            onSyncUpdate={updateSyncImmediately}
           />
-
-          <View style={{
-            flex: 1,
-            backgroundColor: 'white',
-            width: '35%',
-            paddingEnd: insets.bottom,
-            paddingBottom: insets.bottom, // 하단 Safe Area 추가
-          }}>
-            {renderTabContent()}
+        ) : (
+          <View style={[styles.noVideoContainer, { flex: 1 }]}>
+            <Text style={styles.noVideoText}>영상을 추가해주세요</Text>
           </View>
-        </SafeAreaView>
+        )}
+
+        <KeyboardAvoidingView
+          style={{
+            flex: 1,
+            backgroundColor: colors.backgroundCard,
+            paddingEnd: insets.right,
+            paddingBottom: insets.bottom,
+            paddingTop: insets.top,
+          }}
+          behavior="padding"
+        >
+          <ChatList
+            messages={messages}
+            currentUserId={currentUserId || ''}
+            isLoading={messagesLoading}
+          />
+          <ChatInput
+            onSend={sendMessage}
+            onVideoListPress={() => setIsVideoListVisible(true)}
+          />
+          <VideoListBottomSheet
+            visible={isVideoListVisible}
+            onClose={() => setIsVideoListVisible(false)}
+            videos={videoList}
+            onVideoSelect={setSelectedVideo}
+            currentVideoId={selectedVideo?.videoId || ''}
+            onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
+            onVideoDelete={handleVideoDelete}
+            canDelete={isAdmin}
+          />
+          {/* YouTube 브라우저 (가로 모드) */}
+          <YouTubeBrowser
+            visible={isYouTubeBrowserVisible}
+            onClose={() => setIsYouTubeBrowserVisible(false)}
+            onSelectVideo={handleYouTubeVideoSelect}
+          />
+          {/* 토스트 알림 (가로 모드) */}
+          <Toast
+            visible={toastState.visible}
+            message={toastState.message}
+            thumbnail={toastState.thumbnail}
+            type={toastState.type}
+            onHide={hideToast}
+          />
+        </KeyboardAvoidingView>
       </View>
     );
   }
 
-  // 세로 모드
-  return (
-    <View style={{ flex: 1 }}>
-      <StatusBar backgroundColor="#000000" barStyle="light-content" />
-      <View style={{ height: insets.top, backgroundColor: 'black' }} />
-      
-      <SafeAreaView style={{
-        flex: 1,
-        flexDirection: 'column',
-        justifyContent: 'center',
-      }}>
-        <VideoPlayerComponent
-          videoId={selectedVideo.videoId}
-          onTimeUpdate={(current, total) => {
-            setCurrentTime(current);
-            setDuration(total);
-          }}
-        />
+  // 드로어 콘텐츠 (방 정보)
+  const renderDrawerContent = () => (
+    <View style={styles.drawerContainer}>
+      <View style={[styles.drawerHeader, { paddingTop: insets.top + spacing.md }]}>
+        <Text style={styles.drawerTitle}>방 정보</Text>
+        <TouchableOpacity onPress={() => setIsDrawerOpen(false)}>
+          <Text style={styles.drawerCloseButton}>✕</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* 탭 헤더 */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'videos' && styles.activeTab]}
-            onPress={() => setActiveTab('videos')}
-          >
-            <Text style={[styles.tabText, activeTab === 'videos' && styles.activeTabText]}>
-              비디오 목록
+      <FlatList
+        data={members}
+        renderItem={({ item }) => (
+          <ItemRoomMember
+            member={item}
+            currentUserId={currentUserId || ''}
+            isAdmin={isAdmin}
+            onRoleChange={handleRoleChange}
+            onRemoveMember={handleRemoveMember}
+          />
+        )}
+        keyExtractor={(item) => item.userId}
+        ListHeaderComponent={() => (
+          <View style={styles.roomInfoHeader}>
+            <Text style={styles.roomName}>{room?.name}</Text>
+            {room?.description && (
+              <Text style={styles.roomDescription}>{room.description}</Text>
+            )}
+            <Text style={styles.memberCount}>
+              {members.length} 명 참여 중
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'room' && styles.activeTab]}
-            onPress={() => setActiveTab('room')}
-          >
-            <Text style={[styles.tabText, activeTab === 'room' && styles.activeTabText]}>
-              방 정보
-            </Text>
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
+        ListFooterComponent={() => (
+          <View style={styles.drawerFooter}>
+            <TouchableOpacity
+              style={styles.footerButton}
+              onPress={handleLeaveRoom}
+            >
+              <IconExitRoom width={18} height={18} color={colors.textSecondary} />
+              <Text style={styles.footerButtonText}>방 나가기</Text>
+            </TouchableOpacity>
 
-        {/* 탭 콘텐츠 */}
-        <View style={{
-          flex: 1,
-          backgroundColor: 'white',
-          width: '100%',
-          paddingBottom: insets.bottom, // 하단 Safe Area 추가
-        }}>
-          {renderTabContent()}
-        </View>
-
-        <PortraitProgressBar
-          currentTime={currentTime}
-          duration={duration}
-          playHeadWidth={WIDTH_PLAY_HEAD}
-          playerHeight={playerHeight}
-          style={{ bottom: insets.bottom }} // 하단 Safe Area 고려
-        />
-      </SafeAreaView>
+            {currentUserRole === 'owner' && (
+              <TouchableOpacity
+                style={[styles.footerButton, styles.deleteButton]}
+                onPress={handleDeleteRoom}
+              >
+                <Text style={styles.deleteButtonText}>방 삭제</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+      />
     </View>
   );
 
-  // 탭 콘텐츠 렌더링 함수
-  function renderTabContent() {
-    if (activeTab === 'videos') {
-      return (
-        <VideoList
-          videos={VIDEO_LIST}
-          onVideoSelect={setSelectedVideo}
-        />
-      );
-    } else {
-      const renderRoomHeader = () => (
-        <View style={styles.roomInfoHeader}>
-          <Text style={styles.roomName}>{room?.name}</Text>
-          {room?.description && (
-            <Text style={styles.roomDescription}>{room.description}</Text>
-          )}
-          <Text style={styles.memberCount}>
-            {room?.currentMembers}/{room?.maxMembers} 명
-          </Text>
-        </View>
-      );
-
-      const renderMemberItem = ({ item }: { item: any }) => (
-        <ItemRoomMember
-          member={item}
-          currentUserId={currentUserId}
-          isAdmin={isAdmin}
-          onRoleChange={handleRoleChange}
-          onRemoveMember={handleRemoveMember}
-        />
-      );
-
-      const renderRoomFooter = () => (
-        <View style={styles.bottomActions}>
+  // 세로 모드
+  return (
+    <Drawer
+      open={isDrawerOpen}
+      onOpen={() => setIsDrawerOpen(true)}
+      onClose={() => setIsDrawerOpen(false)}
+      renderDrawerContent={renderDrawerContent}
+      drawerStyle={styles.drawer}
+      drawerPosition="right"
+    >
+      <View style={{ flex: 1 }}>
+        <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
+        {/* 헤더 */}
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity
-            style={styles.leaveButton}
-            onPress={handleLeaveRoom}
+            style={styles.headerButton}
+            onPress={() => router.back()}
           >
-            <Text style={styles.leaveButtonText}>나가기</Text>
+            <IconBack width={24} height={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          
-          {currentUserRole === 'owner' && (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={handleDeleteRoom}
-            >
-              <Text style={styles.deleteButtonText}>방 삭제</Text>
-            </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>{room?.name}</Text>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => setIsDrawerOpen(true)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <View style={styles.memberBadgeContainer}>
+              <IconUser width={14} height={14} color={colors.textPrimary} />
+              <Text style={styles.memberBadge}>{members.length}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ flex: 1 }}>
+          {selectedVideo ? (
+            <VideoPlayerComponent
+              videoId={selectedVideo.videoId}
+              onTimeUpdate={(current, total) => {
+                setCurrentTime(current);
+                setDuration(total);
+              }}
+              isPlaying={isPlaying}
+              onPlayStateChange={setIsPlaying}
+              isSyncEnabled={isSyncEnabled}
+              isOwner={isOwner}
+              onSyncToggle={handleSyncToggle}
+              syncTime={syncState?.currentTime}
+              syncIsPlaying={syncState?.isPlaying}
+              onSyncUpdate={updateSyncImmediately}
+            />
+          ) : (
+            <View style={[styles.noVideoContainer, { height: playerHeight }]}>
+              <Text style={styles.noVideoText}>
+                {isLoadingVideos ? '영상 불러오는 중...' : '영상을 추가해주세요'}
+              </Text>
+              <Text style={styles.noVideoSubtext}>
+                YouTube에서 영상을 공유하거나{'\n'}영상 목록에서 추가할 수 있습니다
+              </Text>
+            </View>
+          )}
+
+          {/* 채팅 영역 */}
+          <KeyboardAvoidingView
+            style={styles.chatContainer}
+            behavior="padding"
+            keyboardVerticalOffset={insets.top + scaleHeight(24)}
+          >
+            <ChatList
+              messages={messages}
+              currentUserId={currentUserId || ''}
+              isLoading={messagesLoading}
+            />
+            <ChatInput
+              onSend={sendMessage}
+              onVideoListPress={() => setIsVideoListVisible(true)}
+            />
+          </KeyboardAvoidingView>
+
+          {/* 영상 목록 바텀시트 */}
+          <VideoListBottomSheet
+            visible={isVideoListVisible}
+            onClose={() => setIsVideoListVisible(false)}
+            videos={videoList}
+            onVideoSelect={setSelectedVideo}
+            currentVideoId={selectedVideo?.videoId || ''}
+            onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
+            onVideoDelete={handleVideoDelete}
+            canDelete={isAdmin}
+          />
+
+          {/* YouTube 브라우저 */}
+          <YouTubeBrowser
+            visible={isYouTubeBrowserVisible}
+            onClose={() => setIsYouTubeBrowserVisible(false)}
+            onSelectVideo={handleYouTubeVideoSelect}
+          />
+
+          {/* 토스트 알림 */}
+          <Toast
+            visible={toastState.visible}
+            message={toastState.message}
+            thumbnail={toastState.thumbnail}
+            type={toastState.type}
+            onHide={hideToast}
+          />
+
+          {selectedVideo && (
+            <PortraitProgressBar
+              currentTime={currentTime}
+              duration={duration}
+              playHeadWidth={WIDTH_PLAY_HEAD}
+              playerHeight={playerHeight}
+              style={{ bottom: insets.bottom }}
+            />
           )}
         </View>
-      );
-
-      return (
-        <FlatList
-          data={room?.members || []}
-          renderItem={renderMemberItem}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderRoomHeader}
-          ListFooterComponent={renderRoomFooter}
-          showsVerticalScrollIndicator={false}
-          style={{ flex: 1 }}
-        />
-      );
-    }
-  }
+      </View>
+    </Drawer>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
+  },
+  // 드로어 스타일
+  drawer: {
+    backgroundColor: colors.backgroundCard,
+    width: '80%',
+  },
+  drawerContainer: {
+    flex: 1,
+    backgroundColor: colors.backgroundCard,
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.backgroundElevated,
+  },
+  drawerTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+  },
+  drawerCloseButton: {
+    fontSize: 20,
+    color: colors.textSecondary,
+    padding: spacing.sm,
+  },
+  drawerFooter: {
+    flexDirection: 'column',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    marginTop: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  // 채팅 스타일
+  chatContainer: {
+    flex: 1,
+    backgroundColor: colors.backgroundCard,
   },
   videoSection: {
-    backgroundColor: 'black',
+    backgroundColor: colors.backgroundDark,
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: spacing.lg,
   },
-  tabContainer: {
+  // 헤더 스타일
+  header: {
     flexDirection: 'row',
-    backgroundColor: '#f0f0f0',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.backgroundElevated,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  activeTab: {
-    backgroundColor: 'white',
-    borderBottomWidth: 2,
-    borderBottomColor: '#007AFF',
+  headerButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  tabText: {
-    fontSize: 16,
+  headerButtonText: {
+    fontSize: 20,
+    color: colors.textPrimary,
+    fontWeight: '300',
+  },
+  headerTitle: {
+    ...typography.body,
+    color: colors.textPrimary,
+    flex: 1,
+    textAlign: 'center',
     fontWeight: '600',
-    color: '#666',
   },
-  activeTabText: {
-    color: '#007AFF',
+  memberBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: 16,
+    gap: 4,
+  },
+  memberBadge: {
+    fontSize: 12,
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
   roomInfoHeader: {
-    backgroundColor: 'white',
-    padding: 16,
+    backgroundColor: colors.backgroundCard,
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
+    marginBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   bottomActions: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginTop: 16,
-    backgroundColor: 'white',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    marginTop: spacing.lg,
+    backgroundColor: colors.backgroundCard,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    gap: 12,
-    marginBottom: 20,
+    borderTopColor: colors.border,
+    gap: spacing.md,
+    marginBottom: spacing.xl,
   },
   roomName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    ...typography.h2,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   roomDescription: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 8,
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
     lineHeight: 22,
   },
   memberCount: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-    marginBottom: 8,
+    ...typography.caption,
+    color: colors.primary,
+    marginBottom: spacing.sm,
   },
-  leaveButton: {
-    paddingVertical: 12,
-    borderRadius: 8,
+  footerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: sizes.radiusMd,
+    backgroundColor: colors.backgroundElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  leaveButtonText: {
-    fontSize: 14,
-    fontWeight: '400',
+  footerButtonText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
   },
   deleteButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    flex: 1,
-    alignItems: 'center',
-    maxWidth: 120,
+    backgroundColor: 'transparent',
+    borderColor: colors.error,
   },
   deleteButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.bodySmall,
+    color: colors.error,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
+    ...typography.h4,
+    color: colors.textPrimary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.xl,
+    backgroundColor: colors.backgroundDark,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
   errorText: {
-    fontSize: 16,
-    color: '#FF3B30',
+    ...typography.body,
+    color: colors.error,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: sizes.radiusMd,
   },
   retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.button,
+    color: colors.textOnPrimary,
+  },
+  noVideoContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundDark,
+    padding: spacing.xl,
+  },
+  noVideoText: {
+    ...typography.h3,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  noVideoSubtext: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

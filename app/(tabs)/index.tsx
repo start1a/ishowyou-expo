@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-na
 import { useRouter } from 'expo-router';
 import { RoomList, CreateRoomForm } from '@src/components/Room';
 import { Room } from '@src/api/types';
+import { colors, spacing, sizes, typography } from '@src/theme';
 
 const HomeScreen = () => {
   const router = useRouter();
@@ -18,7 +19,6 @@ const HomeScreen = () => {
       {
         text: '확인',
         onPress: () => {
-          // 생성된 방으로 이동
           router.push(`/room/${roomId}`);
         }
       }
@@ -37,7 +37,7 @@ const HomeScreen = () => {
           <Text style={styles.createButtonText}>+ 방 만들기</Text>
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.content}>
         <Text style={styles.sectionTitle}>참여 가능한 방</Text>
         <RoomList onRoomSelect={handleRoomSelect} />
@@ -64,50 +64,47 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.backgroundDark,
   },
   header: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.xxxxl,
+    paddingHorizontal: spacing.xl,
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 8,
+    ...typography.h1,
+    color: colors.textOnPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
+    ...typography.body,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   createButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 25,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: sizes.radiusFull,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   createButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.button,
+    color: colors.textOnPrimary,
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: spacing.lg,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: colors.backgroundCard,
   },
 });

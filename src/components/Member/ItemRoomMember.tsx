@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { Member } from '@src/api/types';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { RoomMember } from '@src/api/types';
+import { colors, spacing, sizes, typography } from '@src/theme';
 
 interface ItemRoomMemberProps {
-  member: Member;
+  member: RoomMember;
   currentUserId: string;
   isAdmin: boolean;
-  onRoleChange: (member: Member) => void;
-  onRemoveMember: (member: Member) => void;
+  onRoleChange: (member: RoomMember) => void;
+  onRemoveMember: (member: RoomMember) => void;
 }
 
 export const ItemRoomMember = ({
@@ -17,54 +18,71 @@ export const ItemRoomMember = ({
   onRoleChange,
   onRemoveMember,
 }: ItemRoomMemberProps) => {
-  const isCurrentUser = member.id === currentUserId;
+  const isCurrentUser = member.userId === currentUserId;
   const canManage = isAdmin && !isCurrentUser && member.role !== 'owner';
+
+  const getRoleStyle = (role: string) => {
+    switch (role) {
+      case 'owner':
+        return styles.roleOwner;
+      case 'admin':
+        return styles.roleAdmin;
+      default:
+        return styles.roleMember;
+    }
+  };
 
   return (
     <View style={styles.memberItem}>
+      {/* 상단: 아바타 + 이름 + 역할 */}
       <View style={styles.memberInfo}>
         <View style={styles.avatarContainer}>
-          {member.avatar ? (
-            <Text style={styles.avatar}>{member.avatar}</Text>
+          {member.photoURL ? (
+            <Image source={{ uri: member.photoURL }} style={styles.avatarImage} />
           ) : (
-            <Text style={styles.avatarPlaceholder}>
-              {member.nickname.charAt(0).toUpperCase()}
-            </Text>
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarText}>
+                {member.displayName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
           )}
           <View style={[
             styles.onlineIndicator,
             member.isOnline ? styles.online : styles.offline
           ]} />
         </View>
-        
+
         <View style={styles.memberDetails}>
-          <Text style={styles.memberName}>
-            {member.nickname}
-            {isCurrentUser && ' (나)'}
-          </Text>
-          <View style={styles.memberMeta}>
-            <Text style={[styles.roleTag, styles[`role${member.role}` as keyof typeof styles]]}>
-              {member.role === 'owner' ? '방장' : 
-               member.role === 'admin' ? '관리자' : '멤버'}
+          <View style={styles.nameRow}>
+            <Text style={styles.memberName} numberOfLines={1}>
+              {member.displayName}
+              {isCurrentUser && ' (나)'}
             </Text>
-            <Text style={styles.joinDate}>
-              {new Date(member.joinedAt).toLocaleDateString()}
-            </Text>
+            <View style={[styles.roleTag, getRoleStyle(member.role)]}>
+              <Text style={styles.roleTagText}>
+                {member.role === 'owner' ? '방장' :
+                  member.role === 'admin' ? '관리자' : '멤버'}
+              </Text>
+            </View>
           </View>
+          <Text style={styles.joinDate}>
+            {new Date(member.joinedAt).toLocaleDateString()} 참여
+          </Text>
         </View>
       </View>
 
+      {/* 하단: 관리 버튼 */}
       {canManage && (
         <View style={styles.memberActions}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.roleButton]}
+            style={styles.actionButton}
             onPress={() => onRoleChange(member)}
           >
-            <Text style={styles.roleButtonText}>
-              {member.role === 'admin' ? '멤버로' : '관리자로'}
+            <Text style={styles.actionButtonText}>
+              {member.role === 'admin' ? '멤버로 변경' : '관리자로 변경'}
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.actionButton, styles.removeButton]}
             onPress={() => onRemoveMember(member)}
@@ -79,47 +97,39 @@ export const ItemRoomMember = ({
 
 const styles = StyleSheet.create({
   memberItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 12,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    backgroundColor: colors.surfaceCard,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.xs,
+    borderRadius: sizes.radiusMd,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   memberInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    fontSize: 24,
-    textAlign: 'center',
-    lineHeight: 48,
+  avatarImage: {
+    width: sizes.avatarMd,
+    height: sizes.avatarMd,
+    borderRadius: sizes.avatarMd / 2,
   },
   avatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#007AFF',
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    lineHeight: 48,
+    width: sizes.avatarMd,
+    height: sizes.avatarMd,
+    borderRadius: sizes.avatarMd / 2,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    ...typography.h4,
+    color: colors.textOnPrimary,
   },
   onlineIndicator: {
     position: 'absolute',
@@ -129,74 +139,79 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: colors.surfaceCard,
   },
   online: {
-    backgroundColor: '#34C759',
+    backgroundColor: colors.online,
   },
   offline: {
-    backgroundColor: '#8E8E93',
+    backgroundColor: colors.offline,
   },
   memberDetails: {
     flex: 1,
   },
-  memberName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  memberMeta: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  memberName: {
+    ...typography.bodyMedium,
+    color: colors.textPrimary,
+    marginRight: spacing.sm,
+    flexShrink: 1,
   },
   roleTag: {
-    fontSize: 12,
-    fontWeight: '600',
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: 12,
-    marginRight: 8,
+    borderRadius: sizes.radiusSm,
   },
-  roleowner: {
-    backgroundColor: '#FF9500',
-    color: 'white',
+  roleTagText: {
+    ...typography.caption,
+    color: colors.textOnPrimary,
+    fontSize: 10,
   },
-  roleadmin: {
-    backgroundColor: '#5856D6',
-    color: 'white',
+  roleOwner: {
+    backgroundColor: colors.roleOwner,
   },
-  rolemember: {
-    backgroundColor: '#E5E5EA',
-    color: '#333',
+  roleAdmin: {
+    backgroundColor: colors.roleAdmin,
+  },
+  roleMember: {
+    backgroundColor: colors.roleMember,
   },
   joinDate: {
-    fontSize: 12,
-    color: '#8E8E93',
+    ...typography.caption,
+    color: colors.textMuted,
+    fontSize: 11,
   },
   memberActions: {
     flexDirection: 'row',
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    gap: spacing.sm,
   },
   actionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    marginLeft: 8,
-  },
-  roleButton: {
-    backgroundColor: '#007AFF',
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: sizes.radiusSm,
+    backgroundColor: colors.backgroundElevated,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   removeButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: 'transparent',
+    borderColor: colors.error,
   },
-  roleButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
+  actionButtonText: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   removeButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
+    ...typography.caption,
+    color: colors.error,
   },
 });

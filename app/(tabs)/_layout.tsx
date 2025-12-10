@@ -1,36 +1,40 @@
 import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
 import { useOrientationContext } from '@src/contexts/OrientationContext';
-
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-const TabBarIcon = (props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
-  color: string;
-}) => {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
-};
+import { IconHome, IconSettings } from '@src/assets/icons';
+import { colors } from '@src/theme';
 
 const TabLayout = () => {
-  const colorScheme = useColorScheme();
   const { isLandscape } = useOrientationContext();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Hide header completely
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
         headerShown: false,
-        tabBarStyle: isLandscape ? { display: 'none' } : undefined,
-      }}>
+        tabBarStyle: isLandscape
+          ? { display: 'none' }
+          : {
+              backgroundColor: colors.backgroundCard,
+              borderTopColor: colors.border,
+              borderTopWidth: 1,
+            },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+          title: '홈',
+          tabBarIcon: ({ color }) => <IconHome width={24} height={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: '설정',
+          tabBarIcon: ({ color }) => <IconSettings width={24} height={24} color={color} />,
         }}
       />
     </Tabs>

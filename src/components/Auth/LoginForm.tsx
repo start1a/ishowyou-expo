@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { useAuth } from '@src/contexts/AuthContext';
+import { colors, spacing, sizes, typography, shadows } from '@src/theme';
 
 export const LoginForm = () => {
   const { googleLogin, loading } = useAuth();
@@ -20,7 +21,7 @@ export const LoginForm = () => {
     } catch (error: any) {
       console.error('Google login error:', error);
       let errorMessage = '로그인에 실패했습니다.';
-      
+
       if (error.code) {
         switch (error.code) {
           case 'auth/user-disabled':
@@ -37,7 +38,7 @@ export const LoginForm = () => {
             errorMessage = error.message || errorMessage;
         }
       }
-      
+
       Alert.alert('로그인 오류', errorMessage);
     }
   };
@@ -66,7 +67,7 @@ export const LoginForm = () => {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#4285F4" />
+              <ActivityIndicator color={colors.primary} />
             ) : (
               <>
                 <Text style={styles.googleIcon}>🌐</Text>
@@ -95,96 +96,81 @@ export const LoginForm = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.backgroundDark,
     justifyContent: 'center',
-    padding: 20,
+    padding: spacing.xl,
   },
   formContainer: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 20,
-    padding: 32,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
+    backgroundColor: colors.backgroundCard,
+    borderRadius: sizes.radiusLg,
+    padding: spacing.xxxl,
+    ...shadows.xl,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: spacing.xxxxl,
   },
   logoText: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
+    ...typography.h1,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#999',
+    ...typography.body,
+    color: colors.textMuted,
   },
   loginSection: {
     alignItems: 'center',
   },
   welcomeText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 8,
+    ...typography.h2,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   descriptionText: {
-    fontSize: 16,
-    color: '#999',
+    ...typography.body,
+    color: colors.textMuted,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: spacing.xxxl,
     lineHeight: 22,
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 32,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: sizes.radiusMd,
+    padding: spacing.lg,
+    marginBottom: spacing.xxxl,
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.md,
   },
   disabledButton: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.disabled,
   },
   googleIcon: {
     fontSize: 20,
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   googleButtonText: {
-    color: '#333',
-    fontSize: 18,
-    fontWeight: '600',
+    ...typography.button,
+    color: colors.textPrimary,
   },
   infoContainer: {
     alignItems: 'flex-start',
     width: '100%',
   },
   infoText: {
-    color: '#666',
-    fontSize: 14,
-    marginBottom: 8,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
     lineHeight: 20,
   },
 });
