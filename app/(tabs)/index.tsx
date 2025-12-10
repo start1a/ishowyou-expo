@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { RoomList, CreateRoomForm } from '@src/components/Room';
 import { Room } from '@src/api/types';
@@ -15,14 +15,8 @@ const HomeScreen = () => {
 
   const handleRoomCreated = (roomId: string) => {
     setShowCreateModal(false);
-    Alert.alert('성공', '방이 생성되었습니다!', [
-      {
-        text: '확인',
-        onPress: () => {
-          router.push(`/room/${roomId}`);
-        }
-      }
-    ]);
+    // CreateRoomForm에서 이미 성공 토스트를 표시하므로 바로 방으로 이동
+    router.push(`/room/${roomId}`);
   };
 
   return (

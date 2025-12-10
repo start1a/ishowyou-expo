@@ -1,19 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useAuth } from '@src/contexts/AuthContext';
 import { colors, spacing, sizes, typography, shadows } from '@src/theme';
+import { Toast } from '@src/components/Toast';
 
 export const LoginForm = () => {
   const { googleLogin, loading } = useAuth();
+
+  // 토스트 알림 상태
+  const [toastState, setToastState] = useState<{
+    visible: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({ visible: false, message: '', type: 'success' });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'error') => {
+    setToastState({ visible: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToastState(prev => ({ ...prev, visible: false }));
+  };
 
   const handleGoogleLogin = async () => {
     try {
@@ -39,7 +54,7 @@ export const LoginForm = () => {
         }
       }
 
-      Alert.alert('로그인 오류', errorMessage);
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -89,6 +104,14 @@ export const LoginForm = () => {
           </View>
         </View>
       </View>
+
+      {/* 토스트 알림 */}
+      <Toast
+        visible={toastState.visible}
+        message={toastState.message}
+        type={toastState.type}
+        onHide={hideToast}
+      />
     </KeyboardAvoidingView>
   );
 };

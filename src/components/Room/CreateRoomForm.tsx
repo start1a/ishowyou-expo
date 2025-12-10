@@ -2,7 +2,8 @@ import { CreateRoomRequest, RoomService } from '@src/api';
 import { useAuth } from '@src/contexts/AuthContext';
 import { colors, spacing, sizes, typography } from '@src/theme';
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { Toast } from '@src/components/Toast';
 
 interface Props {
   onRoomCreated?: (roomId: string) => void;
@@ -20,19 +21,34 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
   });
   const [loading, setLoading] = useState(false);
 
+  // 토스트 알림 상태
+  const [toastState, setToastState] = useState<{
+    visible: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({ visible: false, message: '', type: 'success' });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToastState({ visible: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToastState(prev => ({ ...prev, visible: false }));
+  };
+
   const handleSubmit = async () => {
     if (!user) {
-      Alert.alert('오류', '로그인이 필요합니다.');
+      showToast('로그인이 필요합니다.', 'error');
       return;
     }
 
     if (!formData.name.trim()) {
-      Alert.alert('오류', '방 이름을 입력해주세요.');
+      showToast('방 이름을 입력해주세요.', 'error');
       return;
     }
 
     if (formData.isPrivate && !formData.password?.trim()) {
-      Alert.alert('오류', '비공개 방은 비밀번호를 입력해주세요.');
+      showToast('비공개 방은 비밀번호를 입력해주세요.', 'error');
       return;
     }
 
@@ -51,13 +67,13 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
       );
 
       if (response.success && response.data) {
-        Alert.alert('성공', '방이 생성되었습니다!');
+        showToast('방이 생성되었습니다!', 'success');
         onRoomCreated?.(response.data.id);
       } else {
-        Alert.alert('오류', response.error || '방 생성에 실패했습니다.');
+        showToast(response.error || '방 생성에 실패했습니다.', 'error');
       }
     } catch (error) {
-      Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+      showToast('네트워크 오류가 발생했습니다.', 'error');
     } finally {
       setLoading(false);
     }
@@ -139,6 +155,14 @@ export const CreateRoomForm = ({ onRoomCreated, onCancel }: Props) => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* 토스트 알림 */}
+      <Toast
+        visible={toastState.visible}
+        message={toastState.message}
+        type={toastState.type}
+        onHide={hideToast}
+      />
     </View>
   );
 };
