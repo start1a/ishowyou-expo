@@ -19,7 +19,7 @@ import { useOrientationContext } from '@src/contexts/OrientationContext';
 import { usePlayerSize } from '@src/hooks/usePlayerSize';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
 import { VideoData } from '@src/types/VideoData';
-import { RoomVideo } from '@src/api/types';
+import { RoomVideo, PlaybackSettings } from '@src/api/types';
 import { VideoUtils } from '@src/utils/VideoUtils';
 import { colors, spacing, sizes, typography } from '@src/theme';
 import { IconBack, IconExitRoom, IconUser } from '@src/assets/icons';
@@ -71,6 +71,14 @@ const RoomDetailScreen = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // 재생 설정 상태
+  const [playbackSettings, setPlaybackSettings] = useState<PlaybackSettings>({
+    repeatMode: 'all',
+    shuffle: false,
+    setBy: '',
+    updatedAt: Date.now()
+  });
 
   // 방장 여부 확인
   const isOwner = currentUserRole === 'owner';
@@ -166,6 +174,22 @@ const RoomDetailScreen = () => {
     };
 
     loadVideos();
+  }, [id]);
+
+  // Firebase에서 재생 설정 구독
+  useEffect(() => {
+    if (!id) return;
+
+    const unsubscribe = RoomService.subscribeToPlaybackSettings(
+      id,
+      (settings) => {
+        if (settings) {
+          setPlaybackSettings(settings);
+        }
+      }
+    );
+
+    return unsubscribe;
   }, [id]);
 
   // 공유된 비디오 처리 및 방에 추가
@@ -482,6 +506,88 @@ const RoomDetailScreen = () => {
     // await RoomService.updateVideoOrder(id, videoIds);
   };
 
+  // 방장/관리자 여부 확인
+  const isAdmin = currentUserRole === 'owner' || currentUserRole === 'admin';
+
+  // 다음 영상 선택 로직
+  const getNextVideo = useCallback((
+    currentVideo: VideoData,
+    videos: VideoData[],
+    settings: PlaybackSettings
+  ): VideoData | null => {
+    const currentIndex = videos.findIndex(v => v.videoId === currentVideo.videoId);
+
+    // Repeat One: 현재 영상 반복 (VideoPlayerComponent에서 처리)
+    if (settings.repeatMode === 'repeat-one') {
+      return currentVideo;
+    }
+
+    // Once: 정지
+    if (settings.repeatMode === 'once') {
+      return null;
+    }
+
+    // Shuffle 모드
+    if (settings.shuffle) {
+      // 현재 영상 제외하고 랜덤 선택
+      const otherVideos = videos.filter(v => v.videoId !== currentVideo.videoId);
+      if (otherVideos.length === 0) return null;
+      const randomIndex = Math.floor(Math.random() * otherVideos.length);
+      return otherVideos[randomIndex];
+    }
+
+    // Sequential 모드
+    const nextIndex = currentIndex + 1;
+
+    // All: 마지막 영상이면 정지
+    if (settings.repeatMode === 'all') {
+      return nextIndex < videos.length ? videos[nextIndex] : null;
+    }
+
+    // Repeat All: 마지막 영상이면 처음으로
+    if (settings.repeatMode === 'repeat-all') {
+      return nextIndex < videos.length ? videos[nextIndex] : videos[0];
+    }
+
+    return null;
+  }, []);
+
+  // 영상 종료 처리
+  const handleVideoEnded = useCallback(() => {
+    if (!selectedVideo) return;
+
+    const nextVideo = getNextVideo(selectedVideo, videoList, playbackSettings);
+
+    if (nextVideo) {
+      if (nextVideo.videoId === selectedVideo.videoId) {
+        // Repeat One: 현재 영상 재시작 (VideoPlayerComponent에서 자동 처리)
+        console.log('Repeat One: Video will auto-restart');
+      } else {
+        // 다음 영상으로 이동
+        setSelectedVideo(nextVideo);
+      }
+    } else {
+      // 재생 종료
+      console.log('Playback finished');
+    }
+  }, [selectedVideo, videoList, playbackSettings, getNextVideo]);
+
+  // 재생 설정 변경 (방장만 가능)
+  const handlePlaybackSettingsChange = useCallback(async (
+    updates: Partial<PlaybackSettings>
+  ) => {
+    if (!isAdmin || !id || !currentUserId) return;
+
+    const newSettings: PlaybackSettings = {
+      ...playbackSettings,
+      ...updates,
+      setBy: currentUserId,
+      updatedAt: Date.now()
+    };
+
+    await RoomService.updatePlaybackSettings(id, newSettings);
+  }, [isAdmin, id, currentUserId, playbackSettings]);
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -509,8 +615,6 @@ const RoomDetailScreen = () => {
     );
   }
 
-  const isAdmin = currentUserRole === 'owner' || currentUserRole === 'admin';
-
   // 풀스크린 모드일 때는 비디오 플레이어만 표시
   if (isLandscape) {
     return (
@@ -532,6 +636,11 @@ const RoomDetailScreen = () => {
             syncTime={syncState?.currentTime}
             syncIsPlaying={syncState?.isPlaying}
             onSyncUpdate={updateSyncImmediately}
+            onVideoEnded={handleVideoEnded}
+            repeatOne={playbackSettings.repeatMode === 'repeat-one'}
+            playbackSettings={playbackSettings}
+            onPlaybackSettingsChange={handlePlaybackSettingsChange}
+            isAdmin={isAdmin}
           />
         ) : (
           <View style={[styles.noVideoContainer, { flex: 1 }]}>
@@ -699,6 +808,11 @@ const RoomDetailScreen = () => {
               syncTime={syncState?.currentTime}
               syncIsPlaying={syncState?.isPlaying}
               onSyncUpdate={updateSyncImmediately}
+              onVideoEnded={handleVideoEnded}
+              repeatOne={playbackSettings.repeatMode === 'repeat-one'}
+              playbackSettings={playbackSettings}
+              onPlaybackSettingsChange={handlePlaybackSettingsChange}
+              isAdmin={isAdmin}
             />
           ) : (
             <View style={[styles.noVideoContainer, { height: playerHeight }]}>

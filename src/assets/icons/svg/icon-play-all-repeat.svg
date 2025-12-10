@@ -1,0 +1,39 @@
+<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- 상단 화살표 (시계방향 위쪽) -->
+  <path
+    d="M32 14 C28 6, 18 4, 10 10"
+    stroke="currentColor"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <!-- 상단 화살표 머리 -->
+  <path
+    d="M32 6 L32 14 L24 14"
+    stroke="currentColor"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+
+  <!-- 하단 화살표 (시계방향 아래쪽) -->
+  <path
+    d="M8 26 C12 34, 22 36, 30 30"
+    stroke="currentColor"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <!-- 하단 화살표 머리 -->
+  <path
+    d="M8 34 L8 26 L16 26"
+    stroke="currentColor"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+</svg>

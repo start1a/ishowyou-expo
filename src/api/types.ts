@@ -1,3 +1,12 @@
+export type RepeatMode = 'once' | 'all' | 'repeat-one' | 'repeat-all';
+
+export interface PlaybackSettings {
+  repeatMode: RepeatMode;
+  shuffle: boolean;
+  setBy: string;
+  updatedAt: number;
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -9,6 +18,7 @@ export interface Room {
   members?: { [userId: string]: Omit<RoomMember, 'userId'> };
   videoState?: VideoState;
   videos?: RoomVideo[];
+  playbackSettings?: PlaybackSettings;
 }
 
 // Room에 저장되는 영상 정보 (간소화된 형태)

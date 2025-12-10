@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { StyleSheet, View, PanResponder, Dimensions } from 'react-native';
+import { StyleSheet, View, PanResponder, Dimensions, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PLAYER_STATES } from 'react-native-youtube-iframe';
 import { scaleHeight, scaleWidth } from '@src/DeviceScale';
@@ -8,7 +8,9 @@ import { VideoPlayerControls } from '@src/components/VideoPlayer/VideoPlayerCont
 import { VideoTimeDisplay } from '@src/components/VideoPlayer/VideoTimeDisplay';
 import { FullScreenButton } from '@src/components/VideoPlayer/FullScreenButton';
 import { SyncToggle } from '@src/components/VideoPlayer/SyncToggle';
-import { spacing } from '@/src/theme';
+import { IconShuffle, IconPlayOnce, IconPlayAll, IconRepeatOne, IconRepeatAll } from '@src/assets/icons';
+import { spacing, colors, sizes } from '@/src/theme';
+import { PlaybackSettings, RepeatMode } from '@src/api/types';
 
 interface VideoPlayerOverlayProps {
   isControllerVisible: boolean;
@@ -28,6 +30,10 @@ interface VideoPlayerOverlayProps {
   isSyncEnabled?: boolean;
   isOwner?: boolean;
   onSyncToggle?: () => void;
+  // 재생 설정 관련 props
+  playbackSettings?: PlaybackSettings;
+  onPlaybackSettingsChange?: (updates: Partial<PlaybackSettings>) => void;
+  isAdmin?: boolean;
 }
 
 export const VideoPlayerOverlay = ({
@@ -47,6 +53,9 @@ export const VideoPlayerOverlay = ({
   isSyncEnabled = false,
   isOwner = false,
   onSyncToggle,
+  playbackSettings,
+  onPlaybackSettingsChange,
+  isAdmin = false,
 }: VideoPlayerOverlayProps) => {
   const insets = useSafeAreaInsets();
   const isDragging = useRef(false);
@@ -122,6 +131,17 @@ export const VideoPlayerOverlay = ({
     })
   ).current;
 
+  // Repeat 모드 순환 로직
+  const handleRepeatModeToggle = () => {
+    if (!onPlaybackSettingsChange || !playbackSettings) return;
+
+    const modes: RepeatMode[] = ['once', 'all', 'repeat-one', 'repeat-all'];
+    const currentIndex = modes.indexOf(playbackSettings.repeatMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+
+    onPlaybackSettingsChange({ repeatMode: modes[nextIndex] });
+  };
+
   return (
     <View
       style={[
@@ -166,6 +186,63 @@ export const VideoPlayerOverlay = ({
                 duration={duration}
               />
 
+              {/* 재생 모드 컨트롤 (방장만 표시) */}
+              {isAdmin && playbackSettings && onPlaybackSettingsChange && (
+                <View style={styles.playbackControls}>
+                  {/* Shuffle 버튼 */}
+                  <TouchableOpacity
+                    style={[
+                      styles.playbackButton,
+                      playbackSettings.shuffle && styles.playbackButtonActive
+                    ]}
+                    onPress={() => onPlaybackSettingsChange({
+                      shuffle: !playbackSettings.shuffle
+                    })}
+                  >
+                    <IconShuffle
+                      width={20}
+                      height={20}
+                      color={playbackSettings.shuffle ? colors.primary : 'white'}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Repeat 버튼 (4가지 모드 순환) */}
+                  <TouchableOpacity
+                    style={[
+                      styles.playbackButton,
+                      playbackSettings.repeatMode !== 'once' && styles.playbackButtonActive
+                    ]}
+                    onPress={handleRepeatModeToggle}
+                  >
+                    {playbackSettings.repeatMode === 'once' ? (
+                      <IconPlayOnce
+                        width={20}
+                        height={20}
+                        color="white"
+                      />
+                    ) : playbackSettings.repeatMode === 'all' ? (
+                      <IconPlayAll
+                        width={20}
+                        height={20}
+                        color="white"
+                      />
+                    ) : playbackSettings.repeatMode === 'repeat-one' ? (
+                      <IconRepeatOne
+                        width={20}
+                        height={20}
+                        color={colors.primary}
+                      />
+                    ) : (
+                      <IconRepeatAll
+                        width={20}
+                        height={20}
+                        color={colors.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+
               <FullScreenButton />
             </View>
 
@@ -192,7 +269,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   containerVisible: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
   syncToggleContainer: {
     position: 'absolute',
@@ -216,6 +293,23 @@ const styles = StyleSheet.create({
   },
   progressBarLandscape: {
     paddingBottom: scaleHeight(20),
-  }
+  },
+  playbackControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginLeft: spacing.md,
+  },
+  playbackButton: {
+    width: 36,
+    height: 36,
+    borderRadius: sizes.radiusFull,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playbackButtonActive: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
 });
 
