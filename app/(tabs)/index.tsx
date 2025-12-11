@@ -162,6 +162,7 @@ const HomeScreen = () => {
         visible={showCreateModal}
         animationType="slide"
         presentationStyle="pageSheet"
+        onRequestClose={() => setShowCreateModal(false)}
       >
         <View style={styles.modalContainer}>
           <CreateRoomForm
