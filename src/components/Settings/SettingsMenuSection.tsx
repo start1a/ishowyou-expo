@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing, typography, sizes } from '@src/theme';
+import { IconForward } from '@src/assets/icons';
 
 interface MenuItemProps {
   icon: string;
@@ -23,7 +24,7 @@ const MenuItem = ({ icon, label, value, onPress, isLast }: MenuItemProps) => (
     </View>
     <View style={styles.menuItemRight}>
       {value && <Text style={styles.menuItemValue}>{value}</Text>}
-      {onPress && <Text style={styles.menuItemChevron}>›</Text>}
+      {onPress && <IconForward width={16} height={16} color={colors.textMuted} />}
     </View>
   </TouchableOpacity>
 );
@@ -109,10 +110,5 @@ const styles = StyleSheet.create({
   menuItemValue: {
     ...typography.bodySmall,
     color: colors.textMuted,
-  },
-  menuItemChevron: {
-    fontSize: 20,
-    color: colors.textMuted,
-    fontWeight: '300',
   },
 });

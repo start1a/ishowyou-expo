@@ -15,7 +15,7 @@ import { useRooms } from '@src/hooks/useRoomApi';
 import { useAuth } from '@src/contexts/AuthContext';
 import { colors, spacing, typography, sizes } from '@src/theme';
 import { Room } from '@src/api/types';
-import { IconBack } from '@src/assets/icons';
+import { IconBack, IconForward } from '@src/assets/icons';
 
 const ShareVideoScreen = () => {
   const router = useRouter();
@@ -74,7 +74,7 @@ const ShareVideoScreen = () => {
           </Text>
         </View>
         <View style={styles.roomArrow}>
-          <Text style={styles.arrowText}>›</Text>
+          <IconForward width={20} height={20} color={colors.textMuted} />
         </View>
       </TouchableOpacity>
     );
@@ -230,10 +230,6 @@ const styles = StyleSheet.create({
   },
   roomArrow: {
     marginLeft: spacing.md,
-  },
-  arrowText: {
-    fontSize: 24,
-    color: colors.textMuted,
   },
   loadingContainer: {
     flex: 1,
