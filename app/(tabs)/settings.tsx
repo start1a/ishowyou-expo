@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import Constants from 'expo-constants';
 import { useAuth } from '@src/contexts/AuthContext';
-import { colors, spacing, sizes, typography } from '@src/theme';
-import { IconLogout } from '@src/assets/icons';
+import { MiniHeader } from '@src/components/common';
+import { ProfileSection, SettingsMenuSection } from '@src/components/Settings';
 import { ConfirmDialog } from '@src/components/ConfirmDialog';
 import { Toast } from '@src/components/Toast';
+import { colors, spacing, typography, sizes } from '@src/theme';
+import { IconLogout } from '@src/assets/icons';
 
 const SettingsScreen = () => {
   const { user, logout } = useAuth();
-  const insets = useSafeAreaInsets();
 
   // 로그아웃 확인 다이얼로그 상태
   const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);
@@ -20,6 +21,9 @@ const SettingsScreen = () => {
     message: string;
     type: 'success' | 'error' | 'info';
   }>({ visible: false, message: '', type: 'success' });
+
+  // 앱 버전
+  const appVersion = Constants.expoConfig?.version || '1.0.0';
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'error') => {
     setToastState({ visible: true, message, type });
@@ -42,30 +46,43 @@ const SettingsScreen = () => {
     }
   };
 
+  const handleAboutPress = () => {
+    showToast(`IShowYou v${appVersion}`, 'info');
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>설정</Text>
-      </View>
+    <View style={styles.container}>
+      {/* 헤더 */}
+      <MiniHeader />
 
-      <View style={styles.content}>
-        <View style={styles.userSection}>
-          <Text style={styles.sectionTitle}>계정</Text>
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.displayName || '사용자'}</Text>
-            <Text style={styles.userEmail}>{user?.email}</Text>
-          </View>
-        </View>
+      {/* 스크롤 콘텐츠 */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 프로필 섹션 */}
+        <ProfileSection user={user} />
 
-        <View style={styles.menuSection}>
-          <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-            <View style={styles.menuItemContent}>
-              <IconLogout width={20} height={20} color={colors.error} />
-              <Text style={styles.menuItemTextDanger}>로그아웃</Text>
-            </View>
+        {/* 설정 메뉴 섹션 */}
+        <SettingsMenuSection
+          appVersion={appVersion}
+          onAboutPress={handleAboutPress}
+        />
+
+        {/* 로그아웃 버튼 */}
+        <View style={styles.logoutSection}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <IconLogout width={20} height={20} color={colors.error} />
+            <Text style={styles.logoutButtonText}>로그아웃</Text>
           </TouchableOpacity>
         </View>
-      </View>
+
+        {/* 버전 푸터 */}
+        <View style={styles.footer}>
+          <Text style={styles.versionText}>버전 {appVersion}</Text>
+        </View>
+      </ScrollView>
 
       {/* 로그아웃 확인 다이얼로그 */}
       <ConfirmDialog
@@ -97,63 +114,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.backgroundDark,
   },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: {
-    ...typography.h2,
-    color: colors.textPrimary,
-  },
-  content: {
+  scrollView: {
     flex: 1,
-    padding: spacing.lg,
   },
-  userSection: {
-    marginBottom: spacing.xl,
+  scrollContent: {
+    paddingBottom: spacing.xxxl,
   },
-  sectionTitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-    textTransform: 'uppercase',
-  },
-  userInfo: {
-    backgroundColor: colors.backgroundCard,
-    padding: spacing.lg,
-    borderRadius: sizes.radiusMd,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  userName: {
-    ...typography.bodyMedium,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  userEmail: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-  },
-  menuSection: {
-    backgroundColor: colors.backgroundCard,
-    borderRadius: sizes.radiusMd,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  menuItem: {
+  logoutSection: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    marginTop: spacing.xl,
   },
-  menuItemContent: {
+  logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
+    height: 52,
+    backgroundColor: colors.backgroundCard,
+    borderRadius: sizes.radiusMd,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
-  menuItemTextDanger: {
+  logoutButtonText: {
     ...typography.body,
+    fontWeight: '600',
     color: colors.error,
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: spacing.xl,
+  },
+  versionText: {
+    ...typography.caption,
+    color: colors.textMuted,
   },
 });

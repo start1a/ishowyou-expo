@@ -68,6 +68,16 @@ export const IconBack = ({ width = sizes.iconMd, height = sizes.iconMd, color = 
   <IconBackSvg width={width} height={height} stroke={color} {...props} />
 );
 
+export const IconForward = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', style, ...props }: IconProps) => (
+  <IconBackSvg
+    width={width}
+    height={height}
+    stroke={color}
+    style={[{ transform: [{ rotate: '180deg' }] }, style]}
+    {...props}
+  />
+);
+
 export const IconHome = ({ width = sizes.iconMd, height = sizes.iconMd, color = 'white', ...props }: IconProps) => (
   <IconHomeSvg width={width} height={height} stroke={color} fill={color} {...props} />
 );

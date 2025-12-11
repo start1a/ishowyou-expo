@@ -26,6 +26,7 @@ import { IconBack, IconExitRoom, IconUser, IconX } from '@src/assets/icons';
 import { YouTubeBrowser } from '@src/components/YouTubeBrowser';
 import { Toast } from '@src/components/Toast';
 import { ConfirmDialog } from '@src/components/ConfirmDialog';
+import { useRecentRoomsContext } from '@src/contexts/RecentRoomsContext';
 
 // RoomVideo를 VideoData로 변환하는 헬퍼 함수
 const roomVideoToVideoData = (roomVideo: RoomVideo): VideoData => ({
@@ -45,6 +46,7 @@ const RoomDetailScreen = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { room, loading, error, refetch } = useRoom(id || '');
+  const { setCurrentRoom } = useRecentRoomsContext();
 
   // 실제 로그인된 사용자 ID 사용
   const currentUserId = user?.uid;
@@ -169,6 +171,37 @@ const RoomDetailScreen = () => {
       gestureEnabled: false,
     });
   }, [navigation]);
+
+  // 현재 방 정보를 전역 상태에 저장 (홈 화면 동기화용)
+  useEffect(() => {
+    if (room) {
+      // 현재 선택된 영상 정보로 videoState 업데이트
+      const updatedRoom = {
+        ...room,
+        videos: videoList.length > 0
+          ? videoList.map(v => ({
+              videoId: v.videoId,
+              title: v.title,
+              thumbnail: v.thumbnail,
+              channelName: v.channelName,
+              duration: v.duration,
+              addedBy: '',
+              addedAt: 0,
+            }))
+          : room.videos,
+        videoState: selectedVideo
+          ? {
+              videoId: selectedVideo.videoId,
+              currentTime: room.videoState?.currentTime ?? 0,
+              isPlaying,
+              updatedAt: room.videoState?.updatedAt ?? Date.now(),
+              updatedBy: room.videoState?.updatedBy ?? '',
+            }
+          : room.videoState,
+      };
+      setCurrentRoom(updatedRoom);
+    }
+  }, [room, selectedVideo, isPlaying, videoList, setCurrentRoom]);
 
   // Firebase에서 영상 목록 불러오기
   useEffect(() => {

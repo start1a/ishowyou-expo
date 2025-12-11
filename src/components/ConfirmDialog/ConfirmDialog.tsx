@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.backgroundElevated,
   },
   cancelButtonText: {
     ...typography.bodySmall,

@@ -13,6 +13,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { OrientationProvider } from '@src/contexts/OrientationContext';
 import { AuthProvider } from '@src/contexts/AuthContext';
 import { ShareProvider } from '@src/contexts/ShareContext';
+import { RecentRoomsProvider } from '@src/contexts/RecentRoomsContext';
 import AuthNavigator from '@src/components/Auth/AuthNavigator';
 import { colors } from '@/src/theme';
 
@@ -60,15 +61,17 @@ const RootLayoutNav = () => {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
         <AuthProvider>
-          <ShareProvider>
-            <OrientationProvider>
-              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
+          <RecentRoomsProvider>
+            <ShareProvider>
+              <OrientationProvider>
+                <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                  <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
 
-                <AuthNavigator />
-              </ThemeProvider>
-            </OrientationProvider>
-          </ShareProvider>
+                  <AuthNavigator />
+                </ThemeProvider>
+              </OrientationProvider>
+            </ShareProvider>
+          </RecentRoomsProvider>
         </AuthProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
