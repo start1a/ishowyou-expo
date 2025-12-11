@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, sizes } from '@src/theme';
 import { scaleWidth, scaleHeight } from '@src/DeviceScale';
@@ -9,12 +9,14 @@ interface ChatInputProps {
   onSend: (message: string) => void;
   onVideoListPress: () => void;
   disabled?: boolean;
+  onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 export const ChatInput = ({
   onSend,
   onVideoListPress,
   disabled = false,
+  onLayout,
 }: ChatInputProps) => {
   const [message, setMessage] = useState('');
   const insets = useSafeAreaInsets();
@@ -27,7 +29,10 @@ export const ChatInput = ({
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom || spacing.sm }]}>
+    <View
+      style={[styles.container, { paddingBottom: insets.bottom || spacing.sm }]}
+      onLayout={onLayout}
+    >
       <TouchableOpacity
         style={styles.videoButton}
         onPress={onVideoListPress}
