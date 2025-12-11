@@ -845,24 +845,26 @@ const RoomDetailScreen = () => {
       <View style={{ flex: 1 }}>
         <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
         {/* 헤더 */}
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleLeaveRoom}
-          >
-            <IconBack width={24} height={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>{room?.name}</Text>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => setIsDrawerOpen(true)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <View style={styles.memberBadgeContainer}>
-              <IconUser width={14} height={14} color={colors.textPrimary} />
-              <Text style={styles.memberBadge}>{members.length}</Text>
-            </View>
-          </TouchableOpacity>
+        <View style={{ backgroundColor: colors.backgroundElevated, paddingTop: insets.top }}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={handleLeaveRoom}
+            >
+              <IconBack width={24} height={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle} numberOfLines={1}>{room?.name}</Text>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => setIsDrawerOpen(true)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <View style={styles.memberBadgeContainer}>
+                <IconUser width={14} height={14} color={colors.textPrimary} />
+                <Text style={styles.memberBadge}>{members.length}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={{ flex: 1 }}>
