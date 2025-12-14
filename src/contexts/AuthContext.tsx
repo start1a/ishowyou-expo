@@ -1,15 +1,17 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, signInWithCredential, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
+import { User, signInWithCredential, GoogleAuthProvider, signOut, onAuthStateChanged, deleteUser } from 'firebase/auth';
 import { ref, get, set, update, serverTimestamp } from 'firebase/database';
 import { auth, database } from '@src/config/firebase';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RoomService } from '@src/api/services/roomService';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   googleLogin: () => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   isFirstLaunch: boolean;
 }
 
@@ -260,11 +262,45 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const deleteAccount = async () => {
+    if (!user || !auth.currentUser) {
+      throw new Error('로그인이 필요합니다');
+    }
+
+    setLoading(true);
+    try {
+      // 1. 소유한 방 확인
+      const roomsResult = await RoomService.getRooms();
+      if (roomsResult.success && roomsResult.data) {
+        const ownedRooms = roomsResult.data.filter(room => room.ownerId === user.uid);
+        if (ownedRooms.length > 0) {
+          throw new Error('OWNED_ROOMS_EXIST');
+        }
+      }
+
+      // 2. Google Sign-In 로그아웃
+      await GoogleSignin.signOut();
+
+      // 3. Firebase Auth 계정 삭제
+      await deleteUser(auth.currentUser);
+
+      // 4. 로컬 세션 삭제
+      await clearUserSession();
+
+    } catch (error) {
+      console.error('계정 삭제 오류:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     user,
     loading,
     googleLogin,
     logout,
+    deleteAccount,
     isFirstLaunch,
   };
 

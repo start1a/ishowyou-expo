@@ -10,10 +10,13 @@ import { colors, spacing, typography, sizes } from '@src/theme';
 import { IconLogout } from '@src/assets/icons';
 
 const SettingsScreen = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
 
   // 로그아웃 확인 다이얼로그 상태
   const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);
+
+  // 계정 삭제 확인 다이얼로그 상태
+  const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
 
   // 토스트 알림 상태
   const [toastState, setToastState] = useState<{
@@ -50,6 +53,23 @@ const SettingsScreen = () => {
     showToast(`IShowYou v${appVersion}`, 'info');
   };
 
+  const handleDeleteAccount = () => {
+    setIsDeleteConfirmVisible(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsDeleteConfirmVisible(false);
+    try {
+      await deleteAccount();
+    } catch (error: any) {
+      if (error.message === 'OWNED_ROOMS_EXIST') {
+        showToast('소유한 방이 있습니다. 먼저 방을 삭제해주세요.', 'error');
+      } else {
+        showToast('계정 삭제에 실패했습니다.', 'error');
+      }
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* 헤더 */}
@@ -82,6 +102,11 @@ const SettingsScreen = () => {
         <View style={styles.footer}>
           <Text style={styles.versionText}>버전 {appVersion}</Text>
         </View>
+
+        {/* 계정 삭제 버튼 - 맨 아래 작게 */}
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+          <Text style={styles.deleteButtonText}>계정 삭제</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* 로그아웃 확인 다이얼로그 */}
@@ -94,6 +119,18 @@ const SettingsScreen = () => {
         confirmColor={colors.error}
         onConfirm={confirmLogout}
         onCancel={() => setIsLogoutConfirmVisible(false)}
+      />
+
+      {/* 계정 삭제 확인 다이얼로그 */}
+      <ConfirmDialog
+        visible={isDeleteConfirmVisible}
+        title="계정 삭제"
+        message="정말 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+        confirmText="삭제"
+        cancelText="취소"
+        confirmColor={colors.error}
+        onConfirm={confirmDeleteAccount}
+        onCancel={() => setIsDeleteConfirmVisible(false)}
       />
 
       {/* 토스트 알림 */}
@@ -139,6 +176,16 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '600',
     color: colors.error,
+  },
+  deleteButton: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    marginTop: spacing.md,
+  },
+  deleteButtonText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textDecorationLine: 'underline',
   },
   footer: {
     alignItems: 'center',
