@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { useAuth } from '@src/contexts/AuthContext';
-import { MiniHeader } from '@src/components/common';
 import { ProfileSection, SettingsMenuSection } from '@src/components/Settings';
 import { ConfirmDialog } from '@src/components/ConfirmDialog';
 import { Toast } from '@src/components/Toast';
 import { colors, spacing, typography, sizes } from '@src/theme';
-import { IconLogout } from '@src/assets/icons';
+import { IconLogout, IconBack } from '@src/assets/icons';
 
 const SettingsScreen = () => {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user, logout, deleteAccount } = useAuth();
 
   // 로그아웃 확인 다이얼로그 상태
@@ -73,7 +76,19 @@ const SettingsScreen = () => {
   return (
     <View style={styles.container}>
       {/* 헤더 */}
-      <MiniHeader />
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <IconBack width={24} height={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>설정</Text>
+          <View style={styles.headerRight} />
+        </View>
+      </View>
 
       {/* 스크롤 콘텐츠 */}
       <ScrollView
@@ -150,6 +165,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundDark,
+  },
+  header: {
+    backgroundColor: colors.backgroundDark,
+  },
+  headerContent: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    ...typography.h4,
+    color: colors.textPrimary,
+  },
+  headerRight: {
+    width: 40,
   },
   scrollView: {
     flex: 1,
