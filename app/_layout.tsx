@@ -2,7 +2,9 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { registerForPushNotificationsAsync } from '@/src/utils/pushNotifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { Platform, StatusBar } from 'react-native';
@@ -56,6 +58,22 @@ const RootLayout = () => {
 
 const RootLayoutNav = () => {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+
+    // 알림 탭(반응) 리스너
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const url = response.notification.request.content.data.url;
+      // console.log('Notification tapped with url:', url);
+      if (url) {
+        router.push(url as any);
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
