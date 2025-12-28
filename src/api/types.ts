@@ -82,6 +82,7 @@ export interface ChatMessage {
   photoURL: string | null;
   content: string;
   createdAt: number;
+  type?: 'user' | 'system';
 }
 
 // User profile stored in /users/{userId}

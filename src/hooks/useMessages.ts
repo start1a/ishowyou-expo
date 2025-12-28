@@ -1,7 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { database } from '@src/config/firebase';
-import { ref, onValue, push, set, query, orderByChild, limitToLast } from 'firebase/database';
+import {
+  ref,
+  push,
+  set,
+  query,
+  orderByChild,
+  onChildAdded,
+  off,
+  startAt
+} from 'firebase/database';
 import { ChatMessage } from '@src/api/types';
+
+// 방별 채팅 내역 메모리 캐시 (세션 유지용)
+const chatMemoryCache: Record<string, ChatMessage[]> = {};
 
 interface UseMessagesReturn {
   messages: ChatMessage[];
@@ -16,10 +28,7 @@ interface UserInfo {
 
 const getTodayDateString = (): string => {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
 export const useMessages = (
@@ -27,31 +36,25 @@ export const useMessages = (
   currentUserId: string | undefined,
   userInfo: UserInfo | undefined
 ): UseMessagesReturn => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // 초기 상태: 캐시가 있으면 가져오고, 없으면 빈 배열
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    return chatMemoryCache[roomId] || [];
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(getTodayDateString());
-  const messagesRef = useRef<any>(null);
-  const previousDateRef = useRef<string | null>(null);
-  const previousMessagesRef = useRef<ChatMessage[]>([]);
 
   // 날짜 변경 감지 (자정 체크)
   useEffect(() => {
-    const checkDate = () => {
+    const interval = setInterval(() => {
       const today = getTodayDateString();
       if (today !== currentDate) {
-        // 기존 메시지를 메모리에 보관
-        previousDateRef.current = currentDate;
-        previousMessagesRef.current = [...messages];
         setCurrentDate(today);
       }
-    };
-
-    // 1분마다 날짜 체크
-    const interval = setInterval(checkDate, 60000);
+    }, 60000);
     return () => clearInterval(interval);
-  }, [currentDate, messages]);
+  }, [currentDate]);
 
-  // 메시지 실시간 리스너
+  // 메시지 실시간 리스너 (onChildAdded)
   useEffect(() => {
     if (!roomId) {
       setIsLoading(false);
@@ -59,52 +62,60 @@ export const useMessages = (
     }
 
     setIsLoading(true);
+    const joinTime = Date.now();
     const messagesPath = `messages/${roomId}/${currentDate}`;
+
+    // 재진입 시 구분선 추가
+    if (chatMemoryCache[roomId] && chatMemoryCache[roomId].length > 0) {
+      const lastMsg = chatMemoryCache[roomId][chatMemoryCache[roomId].length - 1];
+      // 이미 구분선이 마지막이 아닐 때만 추가
+      if (lastMsg.type !== 'system') {
+        const divider: ChatMessage = {
+          id: `divider-${joinTime}`,
+          roomId,
+          userId: 'system',
+          displayName: 'System',
+          photoURL: null,
+          content: '여기부터 대화가 다시 시작됩니다.',
+          createdAt: joinTime,
+          type: 'system'
+        };
+        const updatedMessages = [...chatMemoryCache[roomId], divider];
+        chatMemoryCache[roomId] = updatedMessages;
+        setMessages(updatedMessages);
+      }
+    }
+
+    // 입장 시점 이후의 메시지만 수신 (비용 최적화 핵심)
     const messagesQuery = query(
       ref(database, messagesPath),
       orderByChild('createdAt'),
-      limitToLast(50)
+      startAt(joinTime)
     );
-    messagesRef.current = messagesQuery;
 
-    const unsubscribe = onValue(
-      messagesQuery,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const messagesData = snapshot.val();
-          const messagesList: ChatMessage[] = Object.entries(messagesData).map(
-            ([id, message]) => ({
-              ...(message as Omit<ChatMessage, 'id'>),
-              id,
-            })
-          );
-          // createdAt 기준 정렬
-          messagesList.sort((a, b) => a.createdAt - b.createdAt);
+    const handleChildAdded = (snapshot: any) => {
+      if (snapshot.exists()) {
+        const messageData = snapshot.val();
+        const newMessage: ChatMessage = {
+          ...(messageData as Omit<ChatMessage, 'id'>),
+          id: snapshot.key,
+        };
 
-          // 이전 날짜 메시지 + 오늘 메시지 병합 (메모리에 유지)
-          if (previousMessagesRef.current.length > 0) {
-            setMessages([...previousMessagesRef.current, ...messagesList]);
-          } else {
-            setMessages(messagesList);
-          }
-        } else {
-          // 오늘 메시지가 없어도 이전 날짜 메시지는 유지
-          if (previousMessagesRef.current.length > 0) {
-            setMessages([...previousMessagesRef.current]);
-          } else {
-            setMessages([]);
-          }
-        }
-        setIsLoading(false);
-      },
-      (error) => {
-        console.error('메시지 리스너 에러:', error);
-        setIsLoading(false);
+        setMessages((prev) => {
+          // 중복 방지
+          if (prev.some(m => m.id === newMessage.id)) return prev;
+          const updated = [...prev, newMessage];
+          chatMemoryCache[roomId] = updated; // 캐시 업데이트
+          return updated;
+        });
       }
-    );
+    };
+
+    onChildAdded(messagesQuery, handleChildAdded);
+    setIsLoading(false);
 
     return () => {
-      unsubscribe();
+      off(messagesQuery, 'child_added', handleChildAdded);
     };
   }, [roomId, currentDate]);
 
@@ -123,6 +134,7 @@ export const useMessages = (
         photoURL: userInfo.photoURL,
         content: content.trim(),
         createdAt: Date.now(),
+        type: 'user'
       };
 
       await set(newMessageRef, messageData);
