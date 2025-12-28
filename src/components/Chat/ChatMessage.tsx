@@ -14,6 +14,17 @@ export const ChatMessageItem = memo(({
   isOwnMessage,
   showAvatar,
 }: ChatMessageProps) => {
+  // 시스템 메시지 처리
+  if (message.type === 'system') {
+    return (
+      <View style={styles.systemContainer}>
+        <View style={styles.systemDivider} />
+        <Text style={styles.systemText}>{message.content}</Text>
+        <View style={styles.systemDivider} />
+      </View>
+    );
+  }
+
   return (
     <View style={[
       styles.container,
@@ -165,5 +176,24 @@ const styles = StyleSheet.create({
   },
   otherTimestamp: {
     marginLeft: spacing.xs,
+  },
+  systemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  systemDivider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+    opacity: 0.5,
+  },
+  systemText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginHorizontal: spacing.md,
+    textAlign: 'center',
   },
 });
