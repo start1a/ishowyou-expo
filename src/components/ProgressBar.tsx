@@ -108,6 +108,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 0,
+    zIndex: 100,
   },
   landscapeContainer: {
     paddingHorizontal: scaleWidth(20),

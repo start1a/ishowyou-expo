@@ -119,7 +119,7 @@ export const RoomPortraitView = ({
             </View>
 
             {/* Video Player Area */}
-            <View style={{ height: playerHeight, backgroundColor: 'black' }}>
+            <View style={{ height: playerHeight, backgroundColor: 'black', zIndex: 1 }}>
                 {selectedVideo ? (
                     <VideoPlayerComponent
                         videoId={selectedVideo.videoId}
@@ -146,15 +146,14 @@ export const RoomPortraitView = ({
                         <Text style={styles.noVideoText}>영상을 추가해주세요</Text>
                     </View>
                 )}
+                {/* Progress Bar moved inside to be relative to this container */}
+                <PortraitProgressBar
+                    currentTime={currentTime}
+                    duration={duration}
+                    playHeadWidth={15}
+                    playerHeight={playerHeight}
+                />
             </View>
-
-            {/* Progress Bar */}
-            <PortraitProgressBar
-                currentTime={currentTime}
-                duration={duration}
-                playHeadWidth={15}
-                playerHeight={playerHeight}
-            />
 
 
             {/* Chat Area */}
