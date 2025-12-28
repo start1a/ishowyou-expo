@@ -316,37 +316,169 @@ const RoomDetailScreen = () => {
         </View>
       )}
     >
-      {isLandscape ? (
-        <RoomLandscapeView {...commonUIProps} />
-      ) : (
-        <RoomPortraitView
-          {...commonUIProps}
-          roomName={room?.name || '방'}
-          onOpenDrawer={() => setIsDrawerOpen(true)}
-          onBack={() => router.back()}
-        />
-      )}
+      <View style={[styles.mainContainer, isLandscape && styles.landscapeContainer]}>
+        <StatusBar backgroundColor={colors.backgroundDark} barStyle="light-content" />
 
-      {/* 방 삭제 확인 다이얼로그 */}
-      <ConfirmDialog
-        visible={isDeleteRoomConfirmVisible}
-        title="방 삭제"
-        message="정말로 방을 삭제하시겠습니까? 모든 멤버가 나가게 됩니다."
-        confirmText="삭제"
-        cancelText="취소"
-        confirmColor={colors.error}
-        onConfirm={async () => {
-          setIsDeleteRoomConfirmVisible(false);
-          const response = await RoomService.deleteRoom(id || '');
-          if (response.success) {
-            showToast('방이 삭제되었습니다.');
-            router.back();
-          } else {
-            showToast(response.error || '방 삭제 실패', undefined, 'error');
-          }
-        }}
-        onCancel={() => setIsDeleteRoomConfirmVisible(false)}
-      />
+        {/* Header (Portrait Only) */}
+        {!isLandscape && (
+          <View style={[styles.header, { paddingTop: insets.top }]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+              <Text style={{ color: 'white' }}>뒤로</Text>
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle} numberOfLines={1}>{room?.name || '방'}</Text>
+            </View>
+            <TouchableOpacity onPress={() => setIsDrawerOpen(true)} style={styles.headerButton}>
+              <Text style={{ color: 'white' }}>멤버</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={[styles.contentWrapper, isLandscape && styles.landscapeWrapper]}>
+          {/* Video Player Area - Peristent across orientation changes */}
+          <View style={[
+            isLandscape ? styles.landscapeVideoArea : { height: playerHeight },
+            { backgroundColor: 'black', zIndex: 1 }
+          ]}>
+            {selectedVideo ? (
+              <VideoPlayerComponent
+                videoId={selectedVideo?.videoId}
+                onTimeUpdate={isLandscape ? () => { } : (current, total) => {
+                  setCurrentTime(current);
+                  setDuration(total);
+                }}
+                isPlaying={isPlaying}
+                onPlayStateChange={setIsPlaying}
+                isSyncEnabled={isSyncEnabled}
+                isOwner={isOwner}
+                onSyncToggle={() => isOwner ? toggleSyncControl() : toggleSyncFollow()}
+                syncTime={syncState?.currentTime}
+                syncIsPlaying={syncState?.isPlaying}
+                onSyncUpdate={updateSyncImmediately}
+                onVideoEnded={handleVideoEnded}
+                repeatOne={playbackSettings.repeatMode === 'repeat-one'}
+                playbackSettings={playbackSettings}
+                onPlaybackSettingsChange={(updates) => RoomService.updatePlaybackSettings(id || '', { ...playbackSettings, ...updates })}
+                isAdmin={isAdmin}
+                showToast={showToast}
+              />
+            ) : (
+              <View style={styles.noVideoContainer}>
+                <Text style={styles.noVideoText}>영상을 추가해주세요</Text>
+              </View>
+            )}
+
+            {!isLandscape && (
+              <PortraitProgressBar
+                currentTime={currentTime}
+                duration={duration}
+                playHeadWidth={15}
+                playerHeight={playerHeight}
+              />
+            )}
+          </View>
+
+          {/* Chat Area */}
+          <KeyboardAvoidingView
+            style={[
+              styles.chatSection,
+              isLandscape && {
+                paddingEnd: insets.right,
+                paddingBottom: insets.bottom,
+                paddingTop: insets.top,
+              }
+            ]}
+            behavior="padding"
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          >
+            <ChatList
+              messages={messages}
+              currentUserId={currentUserId || ''}
+              isLoading={messagesLoading}
+            />
+            <ChatInput
+              onSend={sendMessage}
+              onVideoListPress={() => setIsVideoListVisible(true)}
+            />
+          </KeyboardAvoidingView>
+        </View>
+
+        {/* Global Components & Modals */}
+        <VideoListBottomSheet
+          visible={isVideoListVisible}
+          onClose={() => setIsVideoListVisible(false)}
+          videos={videoList}
+          onVideoSelect={setSelectedVideo}
+          currentVideoId={selectedVideo?.videoId || ''}
+          onAddVideoPress={() => setIsYouTubeBrowserVisible(true)}
+          onVideoDelete={handleVideoDelete}
+          canDelete={isAdmin}
+          canReorder={isAdmin}
+          onVideoReorder={handleVideoReorder}
+        />
+
+        <YouTubeBrowser
+          visible={isYouTubeBrowserVisible}
+          onClose={() => setIsYouTubeBrowserVisible(false)}
+          onSelectVideo={handleYouTubeVideoSelect}
+          onSelectMultipleVideos={handleYouTubeMultipleVideoSelect}
+        />
+
+        <Toast
+          visible={toastState.visible}
+          message={toastState.message}
+          subtitle={toastState.subtitle}
+          thumbnail={toastState.thumbnail}
+          type={toastState.type}
+          onHide={() => setToastState(prev => ({ ...prev, visible: false }))}
+        />
+
+        <ConfirmDialog
+          visible={isLeaveConfirmVisible}
+          title="방 나가기"
+          message="정말로 방을 나가시겠습니까?"
+          confirmText="나가기"
+          cancelText="취소"
+          confirmColor={colors.error}
+          onConfirm={async () => { setIsLeaveConfirmVisible(false); await leaveRoom(); router.back(); }}
+          onCancel={() => setIsLeaveConfirmVisible(false)}
+        />
+
+        <ConfirmDialog
+          visible={removeMemberConfirm.visible}
+          title="멤버 추방"
+          message={`${removeMemberConfirm.member?.displayName}님을 방에서 추방하시겠습니까?`}
+          confirmText="추방"
+          cancelText="취소"
+          confirmColor={colors.error}
+          onConfirm={async () => {
+            const member = removeMemberConfirm.member;
+            setRemoveMemberConfirm({ visible: false, member: null });
+            if (member && await removeMember(id || '', member.userId)) showToast(`${member.displayName}님 추방됨`);
+          }}
+          onCancel={() => setRemoveMemberConfirm({ visible: false, member: null })}
+        />
+
+        <ConfirmDialog
+          visible={isDeleteRoomConfirmVisible}
+          title="방 삭제"
+          message="정말로 방을 삭제하시겠습니까? 모든 멤버가 나가게 됩니다."
+          confirmText="삭제"
+          cancelText="취소"
+          confirmColor={colors.error}
+          onConfirm={async () => {
+            setIsDeleteRoomConfirmVisible(false);
+            const response = await RoomService.deleteRoom(id || '');
+            if (response.success) {
+              showToast('방이 삭제되었습니다.');
+              router.back();
+            } else {
+              showToast(response.error || '방 삭제 실패', undefined, 'error');
+            }
+          }}
+          onCancel={() => setIsDeleteRoomConfirmVisible(false)}
+        />
+      </View>
     </Drawer>
   );
 };
@@ -354,6 +486,59 @@ const RoomDetailScreen = () => {
 export default RoomDetailScreen;
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: colors.backgroundDark,
+  },
+  landscapeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  contentWrapper: {
+    flex: 1,
+  },
+  landscapeWrapper: {
+    flexDirection: 'row',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    height: 60,
+    backgroundColor: colors.backgroundDark,
+  },
+  headerButton: {
+    padding: spacing.sm,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: colors.textPrimary,
+    fontSize: typography.h4.fontSize,
+    fontWeight: 'bold',
+  },
+  landscapeVideoArea: {
+    justifyContent: 'center',
+    flex: 60,
+    maxWidth: '60%',
+  },
+  chatSection: {
+    flex: 1,
+    backgroundColor: colors.backgroundCard,
+  },
+  noVideoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'black',
+  },
+  noVideoText: {
+    color: colors.textSecondary,
+    fontSize: 16,
+  },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.backgroundDark },
   loadingText: { color: 'white', fontSize: 16 },
   drawerContainer: { flex: 1, backgroundColor: colors.backgroundDark, width: 280 },

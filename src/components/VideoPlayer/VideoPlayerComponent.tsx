@@ -234,12 +234,7 @@ export const VideoPlayerComponent = ({
 
   return (
     <View style={[
-      isLandscape && {
-        justifyContent: 'center',
-        flex: 60,
-        maxWidth: '60%'
-      },
-      { backgroundColor: 'black' }
+      { backgroundColor: 'black', flex: 1, justifyContent: 'center' }
     ]}>
       <YoutubePlayer
         webViewStyle={isLandscape && { width: '100%', alignSelf: 'center' }}
