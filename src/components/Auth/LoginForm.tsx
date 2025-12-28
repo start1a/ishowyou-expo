@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   useWindowDimensions,
   Linking,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
@@ -178,9 +179,8 @@ export const LoginForm = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Section */}
-      <View style={[styles.topSection, isSmallDevice && styles.topSectionSmall]}>
-        {/* Logo Section */}
+      {/* Fixed Logo Section */}
+      <View style={[styles.logoContainer, isSmallDevice && styles.logoContainerSmall]}>
         <Animated.View style={[styles.logoSection, logoAnimatedStyle, isSmallDevice && styles.logoSectionSmall]}>
           <View style={[styles.appIcon, isSmallDevice && styles.appIconSmall]}>
             <IconPlay width={48} height={48} color={colors.textOnPrimary} />
@@ -188,20 +188,29 @@ export const LoginForm = () => {
           <Text style={styles.appName}>IShowYou</Text>
           <Text style={styles.tagline}>함께 보는 즐거움</Text>
         </Animated.View>
-
-        {/* Feature Highlights */}
-        <View style={[styles.featureHighlights, isSmallDevice && styles.featureHighlightsSmall]}>
-          {FEATURES.map((feature, index) => (
-            <FeatureItem
-              key={feature.title}
-              icon={feature.icon}
-              title={feature.title}
-              description={feature.description}
-              delay={300 + index * 100}
-            />
-          ))}
-        </View>
       </View>
+
+      {/* Scrollable Features Section */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.featuresContainer, isSmallDevice && styles.featuresContainerSmall]}>
+          {/* Feature Highlights */}
+          <View style={[styles.featureHighlights, isSmallDevice && styles.featureHighlightsSmall]}>
+            {FEATURES.map((feature, index) => (
+              <FeatureItem
+                key={feature.title}
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                delay={300 + index * 100}
+              />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
 
       {/* Bottom Section */}
       <Animated.View style={[styles.bottomSection, bottomAnimatedStyle]}>
@@ -257,20 +266,35 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.backgroundDark,
   },
-  topSection: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+  logoContainer: {
+    paddingTop: spacing.xxxl,
+    alignItems: 'center',
   },
-  topSectionSmall: {
+  logoContainerSmall: {
+    paddingTop: spacing.xl,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  featuresContainer: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+    justifyContent: 'center',
+    flex: 1,
+  },
+  featuresContainerSmall: {
     paddingHorizontal: spacing.lg,
   },
+
   logoSection: {
     alignItems: 'center',
-    marginBottom: spacing.xxxl,
+    marginBottom: spacing.md,
   },
   logoSectionSmall: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xs,
   },
   appIcon: {
     width: 100,
@@ -301,12 +325,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   featureHighlights: {
-    marginTop: spacing.xxxl,
     paddingHorizontal: spacing.md,
     gap: spacing.lg,
   },
   featureHighlightsSmall: {
-    marginTop: spacing.lg,
     gap: spacing.md,
   },
   featureItem: {
