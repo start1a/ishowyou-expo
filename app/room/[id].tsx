@@ -27,6 +27,9 @@ import { YouTubeBrowser } from '@src/components/YouTubeBrowser';
 import { Toast } from '@src/components/Toast';
 import { ConfirmDialog } from '@src/components/ConfirmDialog';
 import { useRecentRoomsContext } from '@src/contexts/RecentRoomsContext';
+import { sendPushNotification } from '@src/utils/pushNotifications';
+import { ref, get } from 'firebase/database';
+import { database } from '@src/config/firebase';
 
 // RoomVideo를 VideoData로 변환하는 헬퍼 함수
 const roomVideoToVideoData = (roomVideo: RoomVideo): VideoData => ({
@@ -180,28 +183,66 @@ const RoomDetailScreen = () => {
         ...room,
         videos: videoList.length > 0
           ? videoList.map(v => ({
-              videoId: v.videoId,
-              title: v.title,
-              thumbnail: v.thumbnail,
-              channelName: v.channelName,
-              duration: v.duration,
-              addedBy: '',
-              addedAt: 0,
-            }))
+            videoId: v.videoId,
+            title: v.title,
+            thumbnail: v.thumbnail,
+            channelName: v.channelName,
+            duration: v.duration,
+            addedBy: '',
+            addedAt: 0,
+          }))
           : room.videos,
         videoState: selectedVideo
           ? {
-              videoId: selectedVideo.videoId,
-              currentTime: room.videoState?.currentTime ?? 0,
-              isPlaying,
-              updatedAt: room.videoState?.updatedAt ?? Date.now(),
-              updatedBy: room.videoState?.updatedBy ?? '',
-            }
+            videoId: selectedVideo.videoId,
+            currentTime: room.videoState?.currentTime ?? 0,
+            isPlaying,
+            updatedAt: room.videoState?.updatedAt ?? Date.now(),
+            updatedBy: room.videoState?.updatedBy ?? '',
+          }
           : room.videoState,
       };
       setCurrentRoom(updatedRoom);
     }
   }, [room, selectedVideo, isPlaying, videoList, setCurrentRoom]);
+
+  // (시나리오 3) 영상 추가 알림 발송 함수
+  const notifyMembersOfNewVideo = useCallback(async (videoTitle: string) => {
+    if (!id || !members || members.length <= 1) return;
+
+    try {
+      const tokens: string[] = [];
+
+      // 모든 멤버의 최신 푸시 토큰 조회
+      const tokenPromises = members
+        .filter(m => m.userId !== currentUserId) // 나 제외
+        .map(async (member) => {
+          const userRef = ref(database, `users/${member.userId}`);
+          const snapshot = await get(userRef);
+          if (snapshot.exists()) {
+            const userData = snapshot.val();
+            return userData.pushToken;
+          }
+          return null;
+        });
+
+      const results = await Promise.all(tokenPromises);
+      results.forEach(token => {
+        if (token) tokens.push(token);
+      });
+
+      if (tokens.length > 0) {
+        await sendPushNotification(
+          tokens,
+          '새 영상이 추가되었어요! 🎬',
+          `${user?.displayName || '익명'}님이 '${videoTitle}' 영상을 추가했습니다.`,
+          { url: `/room/${id}` }
+        );
+      }
+    } catch (error) {
+      console.error('영상 추가 알림 발송 실패:', error);
+    }
+  }, [id, members, currentUserId, user]);
 
   // Firebase에서 영상 목록 불러오기
   useEffect(() => {
@@ -276,6 +317,9 @@ const RoomDetailScreen = () => {
         setVideoList(prev => [...prev, newVideoData]);
         setSelectedVideo(newVideoData);
         showToast(`"${newRoomVideo.title}" 추가됨`, newRoomVideo.thumbnail, 'success');
+
+        // 알림 발송
+        notifyMembersOfNewVideo(newRoomVideo.title);
       } else if (response.error === '이미 추가된 영상입니다') {
         // 이미 있는 영상이면 해당 영상 선택
         const video = videoList.find(v => v.videoId === sharedVideoId);
@@ -422,6 +466,9 @@ const RoomDetailScreen = () => {
       setVideoList(prev => [...prev, newVideoData]);
       setSelectedVideo(newVideoData);
       showToast(`"${video.title}" 추가됨`, video.thumbnail, 'success');
+
+      // 알림 발송
+      notifyMembersOfNewVideo(video.title);
     } else {
       showToast(response.error || '영상 추가 실패', undefined, 'error');
     }

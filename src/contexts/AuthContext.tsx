@@ -5,6 +5,7 @@ import { auth, database } from '@src/config/firebase';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RoomService } from '@src/api/services/roomService';
+import { registerForPushNotificationsAsync } from '@src/utils/pushNotifications';
 
 interface AuthContextType {
   user: User | null;
@@ -59,19 +60,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const snapshot = await get(userRef);
 
       if (snapshot.exists()) {
-        // 기존 유저: 로그인 시간만 업데이트
-        await update(userRef, {
+        // 기존 유저: 로그인 시간 및 푸시 토큰 업데이트
+        const updates: any = {
           displayName: user.displayName || '익명',
           photoURL: user.photoURL || null,
           lastLoginAt: serverTimestamp(),
-        });
+        };
+
+        // 푸시 토큰 발급 및 저장
+        const pushToken = await registerForPushNotificationsAsync();
+        if (pushToken) {
+          updates.pushToken = pushToken;
+        }
+
+        await update(userRef, updates);
       } else {
         // 신규 유저: 전체 프로필 생성
+        const pushToken = await registerForPushNotificationsAsync();
         await set(userRef, {
           userId: user.uid,
           displayName: user.displayName || '익명',
           email: user.email || '',
           photoURL: user.photoURL || null,
+          pushToken: pushToken || null,
           createdAt: serverTimestamp(),
           lastLoginAt: serverTimestamp(),
         });

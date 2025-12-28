@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { database } from '@src/config/firebase';
-import { ref, onValue, off, set, remove, onDisconnect } from 'firebase/database';
+import { ref, onValue, off, set, remove, onDisconnect, get } from 'firebase/database';
 import { RoomMember } from '@src/api/types';
+import { sendPushNotification } from '@src/utils/pushNotifications';
 
 interface UseRoomSessionReturn {
   members: RoomMember[];
@@ -64,6 +65,36 @@ export const useRoomSession = (roomId: string, currentUserId?: string): UseRoomS
 
       // 멤버 정보 설정
       await set(memberRef.current, memberData);
+
+      // (시나리오 1) 방장에게 알림 발송 (내가 방장이 아닐 때만)
+      if (memberInfo.role !== 'owner') {
+        const roomRef = ref(database, `rooms/${roomId}`);
+        const roomSnapshot = await get(roomRef);
+
+        if (roomSnapshot.exists()) {
+          const roomData = roomSnapshot.val();
+          const ownerId = roomData.ownerId;
+
+          if (ownerId && ownerId !== currentUserId) {
+            const ownerRef = ref(database, `users/${ownerId}`);
+            const ownerSnapshot = await get(ownerRef);
+
+            if (ownerSnapshot.exists()) {
+              const ownerData = ownerSnapshot.val();
+              const pushToken = ownerData.pushToken;
+
+              if (pushToken) {
+                sendPushNotification(
+                  pushToken,
+                  '누가 들어왔어요! 👋',
+                  `${memberInfo.displayName}님이 '${roomData.name}' 방에 입장했습니다.`,
+                  { url: `/room/${roomId}` }
+                );
+              }
+            }
+          }
+        }
+      }
 
       // 연결 해제 시 멤버 완전 삭제 (앱 종료/네트워크 끊김)
       disconnectRef.current = onDisconnect(memberRef.current);

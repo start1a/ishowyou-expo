@@ -90,6 +90,7 @@ export interface UserProfile {
   displayName: string;
   email: string;
   photoURL: string | null;
+  pushToken?: string;
   createdAt: number;
   lastLoginAt: number;
 }

@@ -39,19 +39,53 @@ export async function registerForPushNotificationsAsync() {
             return;
         }
 
-        // EAS Build를 사용하는 경우 projectId가 자동으로 주입되지만, 
-        // Expo Go 등에서 명시적으로 필요한 경우 app.json의 eas.projectId를 참조해야 할 수 있습니다.
-        // 현재는 기본 설정으로 시도합니다.
         try {
+            // Expo Push Token 가져오기
             token = (await Notifications.getExpoPushTokenAsync()).data;
             console.log('Expo Push Token:', token);
         } catch (e) {
             console.error('Error fetching push token:', e);
         }
     } else {
-        // 시뮬레이터에서는 푸시 알림이 동작하지 않음
         console.log('Must use physical device for Push Notifications');
     }
 
     return token;
+}
+
+/**
+ * Expo Push API를 통해 알림 발송
+ * (백엔드 없이 클라이언트에서 직접 발송하는 방식)
+ */
+export async function sendPushNotification(
+    tokens: string | string[],
+    title: string,
+    body: string,
+    data?: Record<string, any>
+) {
+    const message = {
+        to: tokens,
+        sound: 'default',
+        title: title,
+        body: body,
+        data: data,
+    };
+
+    try {
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Accept-encoding': 'gzip, deflate',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(message),
+        });
+
+        const resData = await response.json();
+        return { success: true, data: resData };
+    } catch (error) {
+        console.error('Push send error:', error);
+        return { success: false, error };
+    }
 }
