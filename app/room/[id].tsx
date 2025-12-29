@@ -32,8 +32,6 @@ import { ref, get } from 'firebase/database';
 import { database } from '@src/config/firebase';
 import { useVideoPlaylist } from '@src/hooks/useVideoPlaylist';
 
-import { RoomPortraitView } from '@src/components/Room/RoomPortraitView';
-import { RoomLandscapeView } from '@src/components/Room/RoomLandscapeView';
 
 
 // RoomVideo를 VideoData로 변환하는 헬퍼 함수
@@ -280,12 +278,13 @@ const RoomDetailScreen = () => {
       onOpen={() => setIsDrawerOpen(true)}
       onClose={() => setIsDrawerOpen(false)}
       drawerPosition="right"
+      drawerStyle={{ width: 280, backgroundColor: colors.backgroundDark }}
       renderDrawerContent={() => (
         <View style={[styles.drawerContainer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.drawerHeader}>
             <Text style={styles.drawerTitle}>멤버 ({members.length})</Text>
             <TouchableOpacity onPress={() => setIsDrawerOpen(false)}>
-              <Text style={{ color: 'white' }}>닫기</Text>
+              <IconX width={24} height={24} color="white" />
             </TouchableOpacity>
           </View>
           <FlatList
@@ -323,13 +322,13 @@ const RoomDetailScreen = () => {
         {!isLandscape && (
           <View style={[styles.header, { paddingTop: insets.top }]}>
             <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-              <Text style={{ color: 'white' }}>뒤로</Text>
+              <IconBack width={24} height={24} color="white" />
             </TouchableOpacity>
             <View style={styles.headerTitleContainer}>
               <Text style={styles.headerTitle} numberOfLines={1}>{room?.name || '방'}</Text>
             </View>
             <TouchableOpacity onPress={() => setIsDrawerOpen(true)} style={styles.headerButton}>
-              <Text style={{ color: 'white' }}>멤버</Text>
+              <IconUser width={24} height={24} color="white" />
             </TouchableOpacity>
           </View>
         )}
@@ -541,7 +540,7 @@ const styles = StyleSheet.create({
   },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.backgroundDark },
   loadingText: { color: 'white', fontSize: 16 },
-  drawerContainer: { flex: 1, backgroundColor: colors.backgroundDark, width: 280 },
+  drawerContainer: { flex: 1, backgroundColor: colors.backgroundDark },
   drawerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
   drawerTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
   drawerFooter: { padding: 16, borderTopWidth: 1, borderTopColor: colors.border },
